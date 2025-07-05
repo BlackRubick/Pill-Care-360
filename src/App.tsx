@@ -1,8 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { AppRoutes } from './routes/routes';
+import { AppRoutes } from './routes';
 
-// Estilos globales
 import './index.css';
 
 function App() {

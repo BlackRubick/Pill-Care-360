@@ -14,10 +14,15 @@ import { CreatePatientPage } from '../pages/patients/CreatePatientPage';
 
 // Páginas de tratamientos
 import { TreatmentsPage } from '../pages/treatments/TreatmentsPage';
+import { AlarmsPage } from '../pages/treatments/AlarmsPage';
 
 // Páginas de monitoreo
 import { MonitoringPage } from '../pages/monitoring/MonitoringPage';
 import { AlertsPage } from '../pages/monitoring/AlertsPage';
+import { ReportsPage } from '../pages/monitoring/ReportsPage';
+
+// Páginas de configuración
+import { SettingsPage } from '../pages/SettingsPage';
 
 // Componente de rutas protegidas (opcional, para futuro uso)
 interface ProtectedRouteProps {
@@ -37,8 +42,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Ruta raíz - redirige al dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* Ruta raíz - redirige al login */}
+      <Route path="/" element={<Navigate to="/auth/login" replace />} />
       
       {/* Dashboard - Primera pantalla */}
       <Route 
@@ -144,8 +149,7 @@ export const AppRoutes: React.FC = () => {
         path="/treatments/alarms" 
         element={
           <ProtectedRoute>
-            {/* Crear componente AlarmsPage */}
-            <div>Gestión de alarmas - Por implementar</div>
+            <AlarmsPage />
           </ProtectedRoute>
         } 
       />
@@ -189,8 +193,7 @@ export const AppRoutes: React.FC = () => {
         path="/monitoring/reports" 
         element={
           <ProtectedRoute>
-            {/* Crear componente ReportsPage */}
-            <div>Reportes avanzados - Por implementar</div>
+            <ReportsPage />
           </ProtectedRoute>
         } 
       />
@@ -200,8 +203,7 @@ export const AppRoutes: React.FC = () => {
         path="/settings" 
         element={
           <ProtectedRoute>
-            {/* Crear componente SettingsPage */}
-            <div>Configuración - Por implementar</div>
+            <SettingsPage />
           </ProtectedRoute>
         } 
       />

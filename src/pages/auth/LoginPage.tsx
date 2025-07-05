@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Pill } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import type { LoginCredentials } from '../../types';
 
 export const LoginPage: React.FC = () => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useState<LoginCredentials>({
     email: '',
     password: ''
@@ -20,13 +21,20 @@ export const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      // Aquí iría la lógica de autenticación
+      // Aquí iría la lógica de autenticación con tu API de Python
       console.log('Login attempt:', credentials);
-      // Simular delay
+      
+      // Simular delay de autenticación
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Redirigir al dashboard después del login exitoso
-      window.location.href = '/dashboard';
+      // Simulamos una validación básica
+      if (credentials.email && credentials.password) {
+        // Login exitoso - redirigir al dashboard
+        navigate('/dashboard');
+      } else {
+        throw new Error('Credenciales inválidas');
+      }
+      
     } catch (err) {
       setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
     } finally {
@@ -132,6 +140,13 @@ export const LoginPage: React.FC = () => {
                 Regístrate aquí
               </Link>
             </span>
+          </div>
+
+          {/* Mensaje de prueba */}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>Modo de prueba:</strong> Ingresa cualquier email y contraseña para acceder al dashboard.
+            </p>
           </div>
         </form>
       </div>

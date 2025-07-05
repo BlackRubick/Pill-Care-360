@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Pill } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import type { RegisterData } from '../../types';
 
 export const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<RegisterData>({
     name: '',
     email: '',
@@ -53,12 +54,18 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Aquí iría la lógica de registro
+      // Aquí iría la lógica de registro con tu API de Python
       console.log('Register attempt:', formData);
       // Simular delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setSuccess(true);
+      
+      // Redirigir al login después de 2 segundos
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 2000);
+      
     } catch (err) {
       setErrors({ email: 'Error en el registro. Intenta nuevamente.' });
     } finally {
@@ -92,13 +99,14 @@ export const RegisterPage: React.FC = () => {
           <Alert
             type="success"
             title="¡Registro exitoso!"
-            message="Tu cuenta ha sido creada correctamente. Puedes iniciar sesión ahora."
+            message="Tu cuenta ha sido creada correctamente. Te redirigiremos al login en unos segundos..."
           />
-          <Link to="/auth/login">
-            <Button className="w-full">
-              Ir a Iniciar Sesión
-            </Button>
-          </Link>
+          <Button 
+            onClick={() => navigate('/auth/login')}
+            className="w-full"
+          >
+            Ir a Iniciar Sesión Ahora
+          </Button>
         </div>
       </div>
     );
