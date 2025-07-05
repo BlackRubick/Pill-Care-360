@@ -14,15 +14,10 @@ import { CreatePatientPage } from '../pages/patients/CreatePatientPage';
 
 // Páginas de tratamientos
 import { TreatmentsPage } from '../pages/treatments/TreatmentsPage';
-import { AlarmsPage } from '../pages/treatments/AlarmsPage';
 
 // Páginas de monitoreo
 import { MonitoringPage } from '../pages/monitoring/MonitoringPage';
 import { AlertsPage } from '../pages/monitoring/AlertsPage';
-import { ReportsPage } from '../pages/monitoring/ReportsPage';
-
-// Páginas de configuración
-import { SettingsPage } from '../pages/SettingsPage';
 
 // Componente de rutas protegidas (opcional, para futuro uso)
 interface ProtectedRouteProps {
@@ -42,8 +37,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Ruta raíz - redirige al login */}
-      <Route path="/" element={<Navigate to="/auth/login" replace />} />
+      {/* Ruta raíz - redirige al dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       
       {/* Dashboard - Primera pantalla */}
       <Route 
@@ -149,7 +144,8 @@ export const AppRoutes: React.FC = () => {
         path="/treatments/alarms" 
         element={
           <ProtectedRoute>
-            <AlarmsPage />
+            {/* Crear componente AlarmsPage */}
+            <div>Gestión de alarmas - Por implementar</div>
           </ProtectedRoute>
         } 
       />
@@ -193,7 +189,8 @@ export const AppRoutes: React.FC = () => {
         path="/monitoring/reports" 
         element={
           <ProtectedRoute>
-            <ReportsPage />
+            {/* Crear componente ReportsPage */}
+            <div>Reportes avanzados - Por implementar</div>
           </ProtectedRoute>
         } 
       />
@@ -203,7 +200,8 @@ export const AppRoutes: React.FC = () => {
         path="/settings" 
         element={
           <ProtectedRoute>
-            <SettingsPage />
+            {/* Crear componente SettingsPage */}
+            <div>Configuración - Por implementar</div>
           </ProtectedRoute>
         } 
       />
