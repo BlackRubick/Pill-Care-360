@@ -11,22 +11,24 @@ import {
   Settings,
   X
 } from 'lucide-react';
+import { NAVIGATION_ITEMS } from '../../routes/constants';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const menuItems = [
-  { icon: Home, label: 'Dashboard', path: '/dashboard' },
-  { icon: Users, label: 'Pacientes', path: '/patients' },
-  { icon: Pill, label: 'Tratamientos', path: '/treatments' },
-  { icon: Calendar, label: 'Alarmas', path: '/treatments/alarms' },
-  { icon: Activity, label: 'Monitoreo', path: '/monitoring' },
-  { icon: BarChart3, label: 'Reportes', path: '/monitoring/reports' },
-  { icon: AlertTriangle, label: 'Alertas', path: '/monitoring/alerts' },
-  { icon: Settings, label: 'Configuración', path: '/settings' },
-];
+// Mapeo de iconos
+const iconMap = {
+  Home,
+  Users,
+  Pill,
+  Activity,
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  Settings
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -48,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-4 bg-gray-800">
-          <span className="text-white font-semibold text-lg">Menú</span>
+          <span className="text-white font-semibold text-lg">PillCare 360</span>
           <button
             onClick={onClose}
             className="md:hidden text-gray-300 hover:text-white"
@@ -59,13 +61,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         <nav className="mt-8">
           <div className="px-2 space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
+            {NAVIGATION_ITEMS.map((item) => {
+              const Icon = iconMap[item.icon as keyof typeof iconMap];
               const isActive = location.pathname === item.path;
               
               return (
                 <Link
-                  key={item.path}
+                  key={item.key}
                   to={item.path}
                   onClick={() => window.innerWidth < 768 && onClose()}
                   className={`
