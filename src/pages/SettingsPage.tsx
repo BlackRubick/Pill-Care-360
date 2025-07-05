@@ -716,28 +716,7 @@ export const SettingsPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Información adicional */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <HelpCircle size={20} className="text-blue-600" />
-              <div>
-                <p className="font-medium text-gray-900">¿Necesitas ayuda?</p>
-                <p className="text-sm text-gray-500">
-                  Consulta nuestra documentación o contacta al soporte técnico
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
-                Documentación
-              </Button>
-              <Button variant="outline" size="sm">
-                Contactar Soporte
-              </Button>
-            </div>
-          </div>
-        </Card>
+
 
         {/* Información del sistema */}
         <Card title="Información del Sistema">
@@ -748,7 +727,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Última Actualización</p>
-              <p className="text-lg font-semibold text-gray-900">07 Dic 2024</p>
+              <p className="text-lg font-semibold text-gray-900">05 Jul 2025</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Licencia</p>
