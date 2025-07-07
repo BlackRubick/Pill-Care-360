@@ -11,14 +11,21 @@ import { RegisterPage } from '../pages/auth/RegisterPage';
 // Páginas de pacientes
 import { PatientsPage } from '../pages/patients/PatientsPage';
 import { CreatePatientPage } from '../pages/patients/CreatePatientPage';
+import { PatientDetailPage } from '../pages/patients/PatientDetailPage';
+import { EditPatientPage } from '../pages/patients/EditPatientPage';
 
 // Páginas de tratamientos
 import { TreatmentsPage } from '../pages/treatments/TreatmentsPage';
+import { CreateTreatmentPage } from '../pages/treatments/CreateTreatmentPage';
+import { TreatmentDetailPage } from '../pages/treatments/TreatmentDetailPage';
+import { EditTreatmentPage } from '../pages/treatments/EditTreatmentPage';
 import { AlarmsPage } from '../pages/treatments/AlarmsPage';
 
 // Páginas de monitoreo
 import { MonitoringPage } from '../pages/monitoring/MonitoringPage';
 import { AlertsPage } from '../pages/monitoring/AlertsPage';
+import { CompliancePage } from '../pages/monitoring/CompliancePage';
+import { HistoryPage } from '../pages/monitoring/HistoryPage';
 import { ReportsPage } from '../pages/monitoring/ReportsPage';
 
 // Páginas de configuración
@@ -94,8 +101,7 @@ export const AppRoutes: React.FC = () => {
         path="/patients/:id" 
         element={
           <ProtectedRoute>
-            {/* Crear componente PatientDetailPage */}
-            <div>Detalle del paciente - Por implementar</div>
+            <PatientDetailPage />
           </ProtectedRoute>
         } 
       />
@@ -103,8 +109,7 @@ export const AppRoutes: React.FC = () => {
         path="/patients/:id/edit" 
         element={
           <ProtectedRoute>
-            {/* Crear componente EditPatientPage */}
-            <div>Editar paciente - Por implementar</div>
+            <EditPatientPage />
           </ProtectedRoute>
         } 
       />
@@ -122,8 +127,7 @@ export const AppRoutes: React.FC = () => {
         path="/treatments/create" 
         element={
           <ProtectedRoute>
-            {/* Crear componente CreateTreatmentPage */}
-            <div>Crear tratamiento - Por implementar</div>
+            <CreateTreatmentPage />
           </ProtectedRoute>
         } 
       />
@@ -131,8 +135,7 @@ export const AppRoutes: React.FC = () => {
         path="/treatments/:id" 
         element={
           <ProtectedRoute>
-            {/* Crear componente TreatmentDetailPage */}
-            <div>Detalle del tratamiento - Por implementar</div>
+            <TreatmentDetailPage />
           </ProtectedRoute>
         } 
       />
@@ -140,8 +143,7 @@ export const AppRoutes: React.FC = () => {
         path="/treatments/:id/edit" 
         element={
           <ProtectedRoute>
-            {/* Crear componente EditTreatmentPage */}
-            <div>Editar tratamiento - Por implementar</div>
+            <EditTreatmentPage />
           </ProtectedRoute>
         } 
       />
@@ -175,8 +177,7 @@ export const AppRoutes: React.FC = () => {
         path="/monitoring/compliance" 
         element={
           <ProtectedRoute>
-            {/* Crear componente CompliancePage */}
-            <div>Reporte de cumplimiento - Por implementar</div>
+            <CompliancePage />
           </ProtectedRoute>
         } 
       />
@@ -184,8 +185,7 @@ export const AppRoutes: React.FC = () => {
         path="/monitoring/history" 
         element={
           <ProtectedRoute>
-            {/* Crear componente HistoryPage */}
-            <div>Historial completo - Por implementar</div>
+            <HistoryPage />
           </ProtectedRoute>
         } 
       />

@@ -4,7 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
-import { Input } from '../../components/ui/Input';
+import { CreateAlarmModal, EditAlarmModal } from '../../components/alarms/AlarmModals';
 import { 
   Plus, 
   Search, 
@@ -23,10 +23,24 @@ import {
   Calendar
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Alarm } from '../../types';
+
+interface AlarmData {
+  id: string;
+  treatmentId: string;
+  patientName: string;
+  medicationName: string;
+  time: string;
+  description: string;
+  isActive: boolean;
+  soundEnabled: boolean;
+  visualEnabled: boolean;
+  frequency: string;
+  lastTriggered?: Date;
+  nextTrigger?: Date;
+}
 
 // Datos simulados expandidos
-const mockAlarms = [
+const initialAlarms: AlarmData[] = [
   {
     id: '1',
     treatmentId: '1',
@@ -105,10 +119,11 @@ const mockUser = {
 };
 
 export const AlarmsPage: React.FC = () => {
-  const [alarms, setAlarms] = useState(mockAlarms);
+  const [alarms, setAlarms] = useState<AlarmData[]>(initialAlarms);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [selectedAlarm, setSelectedAlarm] = useState<any>(null);
+  const [selectedAlarm, setSelectedAlarm] = useState<AlarmData | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -129,6 +144,18 @@ export const AlarmsPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const handleCreateAlarm = (alarmData: AlarmData) => {
+    setAlarms(prev => [...prev, alarmData]);
+    console.log('Nueva alarma creada:', alarmData);
+  };
+
+  const handleEditAlarm = (alarmData: AlarmData) => {
+    setAlarms(prev => prev.map(alarm => 
+      alarm.id === alarmData.id ? alarmData : alarm
+    ));
+    console.log('Alarma editada:', alarmData);
+  };
+
   const handleToggleAlarm = (alarmId: string) => {
     setAlarms(prev => prev.map(alarm => 
       alarm.id === alarmId 
@@ -145,7 +172,7 @@ export const AlarmsPage: React.FC = () => {
     ));
   };
 
-  const handleEditAlarm = (alarm: any) => {
+  const openEditModal = (alarm: AlarmData) => {
     setSelectedAlarm(alarm);
     setShowEditModal(true);
   };
@@ -176,8 +203,8 @@ export const AlarmsPage: React.FC = () => {
   const getNextAlarms = () => {
     const now = new Date();
     return alarms
-      .filter(alarm => alarm.isActive && alarm.nextTrigger > now)
-      .sort((a, b) => a.nextTrigger.getTime() - b.nextTrigger.getTime())
+      .filter(alarm => alarm.isActive && alarm.nextTrigger && alarm.nextTrigger > now)
+      .sort((a, b) => (a.nextTrigger?.getTime() || 0) - (b.nextTrigger?.getTime() || 0))
       .slice(0, 5);
   };
 
@@ -197,7 +224,10 @@ export const AlarmsPage: React.FC = () => {
                 <span>Ver Tratamientos</span>
               </Button>
             </Link>
-            <Button className="flex items-center space-x-2">
+            <Button 
+              className="flex items-center space-x-2"
+              onClick={() => setShowCreateModal(true)}
+            >
               <Plus size={16} />
               <span>Nueva Alarma</span>
             </Button>
@@ -257,7 +287,9 @@ export const AlarmsPage: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-blue-600">{formatTime(alarm.time)}</p>
-                  <p className="text-xs text-gray-500">{formatDateTime(alarm.nextTrigger)}</p>
+                  <p className="text-xs text-gray-500">
+                    {alarm.nextTrigger && formatDateTime(alarm.nextTrigger)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -377,7 +409,7 @@ export const AlarmsPage: React.FC = () => {
                           {alarm.isActive ? <Pause size={16} /> : <Play size={16} />}
                         </button>
                         <button
-                          onClick={() => handleEditAlarm(alarm)}
+                          onClick={() => openEditModal(alarm)}
                           className="text-blue-600 hover:text-blue-900 p-1"
                           title="Editar"
                         >
@@ -418,6 +450,24 @@ export const AlarmsPage: React.FC = () => {
             )}
           </div>
         </Card>
+
+        {/* Modal de crear alarma */}
+        <CreateAlarmModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSave={handleCreateAlarm}
+        />
+
+        {/* Modal de editar alarma */}
+        <EditAlarmModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedAlarm(null);
+          }}
+          onSave={handleEditAlarm}
+          alarm={selectedAlarm}
+        />
 
         {/* Modal de eliminación */}
         <Modal
