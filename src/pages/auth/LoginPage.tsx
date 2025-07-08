@@ -4,6 +4,7 @@ import { Pill } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import apiService from '../../services/api';
 import type { LoginCredentials } from '../../types';
 
 export const LoginPage: React.FC = () => {
@@ -21,22 +22,58 @@ export const LoginPage: React.FC = () => {
     setError('');
 
     try {
-      // Aquí iría la lógica de autenticación con tu API de Python
       console.log('Login attempt:', credentials);
       
-      // Simular delay de autenticación
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Intentar login con tu API de Python
+      const response = await apiService.login(credentials.email, credentials.password);
       
-      // Simulamos una validación básica
-      if (credentials.email && credentials.password) {
-        // Login exitoso - redirigir al dashboard
-        navigate('/dashboard');
+      console.log('Login successful:', response);
+      
+      // Login exitoso - el token ya se guardó en apiService.login()
+      navigate('/dashboard');
+      
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Determinar si es un error de conexión o un error de autenticación
+      const isConnectionError = err.message.includes('fetch') || 
+                               err.message.includes('network') || 
+                               err.message.includes('Failed to fetch') ||
+                               err.message.includes('NetworkError');
+      
+      const isAuthError = err.message.includes('401') || 
+                         err.message.includes('Credenciales inválidas') ||
+                         err.message.includes('Unauthorized');
+      
+      // Manejo de errores específicos
+      if (isAuthError) {
+        setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+      } else if (isConnectionError) {
+        setError('Error de conexión. Verifica que el servidor esté funcionando.');
+        
+        // Solo usar fallback si es un error de conexión Y estamos en desarrollo
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error de conexión detectado, ofreciendo fallback de desarrollo');
+          // Mostrar opción de fallback después de 2 segundos
+          setTimeout(() => {
+            if (confirm('¿Usar modo sin conexión para desarrollo? (Esto permitirá acceso sin validar credenciales)')) {
+              if (credentials.email && credentials.password) {
+                localStorage.setItem('authToken', 'dev-offline-token');
+                localStorage.setItem('access_token', 'dev-offline-token');
+                localStorage.setItem('user', JSON.stringify({
+                  id: '1',
+                  name: 'Dr. Usuario Desarrollo (Sin conexión)',
+                  email: credentials.email
+                }));
+                navigate('/dashboard');
+              }
+            }
+          }, 2000);
+        }
       } else {
-        throw new Error('Credenciales inválidas');
+        setError('Error inesperado. Intenta nuevamente.');
       }
       
-    } catch (err) {
-      setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +85,11 @@ export const LoginPage: React.FC = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleRegisterClick = () => {
+    console.log('Navegando a registro...');
+    navigate('/auth/register');
   };
 
   return (
@@ -133,20 +175,48 @@ export const LoginPage: React.FC = () => {
           <div className="text-center">
             <span className="text-sm text-gray-600">
               ¿No tienes una cuenta?{' '}
-              <Link
-                to="/auth/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Regístrate aquí
-              </Link>
             </span>
+            {/* Opción 1: Usando Link */}
+            <Link
+              to="/auth/register"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              Regístrate aquí
+            </Link>
+            
+            {/* Opción 2: Usando botón con navigate (comentado para probar)
+            <button
+              type="button"
+              onClick={handleRegisterClick}
+              className="font-medium text-blue-600 hover:text-blue-500 underline bg-transparent border-none cursor-pointer"
+            >
+              Regístrate aquí
+            </button>
+            */}
           </div>
 
-          {/* Mensaje de prueba */}
+          {/* Mensaje de prueba actualizado */}
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-800">
-              <strong>Modo de prueba:</strong> Ingresa cualquier email y contraseña para acceder al dashboard.
+              <strong>Conectado a API:</strong> Se validarán las credenciales con el servidor de Python.
             </p>
+            <p className="text-xs text-blue-600 mt-1">
+              API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
+            </p>
+            <p className="text-xs text-blue-500 mt-1">
+              💡 Primero regístrate si no tienes una cuenta
+            </p>
+          </div>
+
+          {/* Botón de prueba para verificar navegación */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={handleRegisterClick}
+              className="text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              [Debug] Ir a Registro
+            </button>
           </div>
         </form>
       </div>

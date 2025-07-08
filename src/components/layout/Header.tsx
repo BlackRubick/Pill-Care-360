@@ -18,6 +18,11 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
   notificationCount = 0
 }) => {
+  const handleLogoutClick = () => {
+    console.log('Header: Logout button clicked');
+    onLogout();
+  };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -52,28 +57,30 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Usuario */}
             <div className="flex items-center space-x-2">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-sm font-medium text-gray-900">{user?.name || 'Usuario'}</p>
+                <p className="text-xs text-gray-500">{user?.email || 'usuario@ejemplo.com'}</p>
               </div>
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <User size={16} className="text-white" />
               </div>
             </div>
 
-            {/* Logout */}
+            {/* Logout - Versión desktop */}
             <Button
               variant="outline"
               size="sm"
-              onClick={onLogout}
-              className="hidden sm:flex items-center space-x-1"
+              onClick={handleLogoutClick}
+              className="hidden sm:flex items-center space-x-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
             >
               <LogOut size={16} />
-              <span>Salir</span>
+              <span>Cerrar Sesión</span>
             </Button>
             
+            {/* Logout - Versión móvil */}
             <button
-              onClick={onLogout}
-              className="sm:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md"
+              onClick={handleLogoutClick}
+              className="sm:hidden p-2 text-red-600 hover:text-red-900 hover:bg-red-100 rounded-md"
+              title="Cerrar Sesión"
             >
               <LogOut size={20} />
             </button>

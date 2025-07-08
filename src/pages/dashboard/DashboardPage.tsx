@@ -12,7 +12,7 @@ import {
   Plus,
   Eye
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // Datos simulados
 const dashboardStats = {
@@ -80,9 +80,26 @@ const mockUser = {
 };
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const handleLogout = () => {
-    // Lógica de logout
-    console.log('Logging out...');
+    // Limpiar datos de sesión
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('user');
+    sessionStorage.clear();
+    localStorage.clear();
+    
+    // También puedes limpiar cookies si las usas
+    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    
+    console.log('Sesión cerrada exitosamente');
+    
+    // Forzar redirección inmediata
+    window.location.href = '/auth/login';
   };
 
   return (

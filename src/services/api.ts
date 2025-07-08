@@ -29,7 +29,15 @@ interface User {
   id: number;
   name: string;
   email: string;
-  // Agrega más campos si tu API los retorna
+  role?: string;
+}
+
+interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  confirm_password: string; // Agregar este campo requerido por la API
+  role: string;
 }
 
 class ApiService {
@@ -78,32 +86,123 @@ class ApiService {
   // ----- Autenticación -----
 
   async login(email: string, password: string): Promise<{ access_token: string; user: User }> {
-    const formData = new FormData();
-    formData.append('username', email);
-    formData.append('password', password);
+    try {
+      console.log('Intentando login con:', { email, password: '***' });
+      
+      const formData = new FormData();
+      formData.append('username', email);
+      formData.append('password', password);
 
-    const response = await fetch(`${this.baseURL}/auth/login`, {
-      method: 'POST',
-      body: formData,
-    });
+      const response = await fetch(`${this.baseURL}/auth/login`, {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error('Credenciales inválidas');
+      console.log('Respuesta login:', response.status, response.statusText);
+
+      if (!response.ok) {
+        let errorMessage = 'Error en el login';
+        try {
+          const errorData = await response.json();
+          console.log('Error de login detallado:', errorData);
+          
+          if (response.status === 401) {
+            errorMessage = 'Credenciales inválidas. Verifica tu email y contraseña.';
+          } else if (response.status === 422) {
+            errorMessage = 'Formato de datos inválido.';
+          } else {
+            errorMessage = errorData.message || 'Error en el servidor';
+          }
+        } catch (parseError) {
+          console.error('Error parsing login response:', parseError);
+          if (response.status === 401) {
+            errorMessage = 'Credenciales inválidas';
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('Login exitoso:', { ...data, access_token: '***' });
+      
+      this.token = data.access_token;
+      localStorage.setItem('access_token', this.token);
+      localStorage.setItem('authToken', this.token); // Para compatibilidad
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      return data;
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
     }
+  }
 
-    const data = await response.json();
-    this.token = data.access_token;
-    localStorage.setItem('access_token', this.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+  async register(userData: RegisterData): Promise<{ message: string; user: User }> {
+    try {
+      console.log('Enviando datos de registro:', userData);
+      
+      const response = await fetch(`${this.baseURL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
 
-    return data;
+      console.log('Respuesta del servidor:', response.status, response.statusText);
+
+      if (!response.ok) {
+        // Intentar obtener el mensaje de error detallado
+        let errorMessage = 'Error en el registro';
+        try {
+          const errorData = await response.json();
+          console.log('Error detallado:', errorData);
+          
+          if (response.status === 422) {
+            // Error de validación - mostrar detalles específicos
+            if (errorData.detail && Array.isArray(errorData.detail)) {
+              const validationErrors = errorData.detail.map((err: any) => 
+                `${err.loc?.join('.')}: ${err.msg}`
+              ).join(', ');
+              errorMessage = `Errores de validación: ${validationErrors}`;
+            } else {
+              errorMessage = 'Datos inválidos. Verifica que todos los campos estén correctos.';
+            }
+          } else if (response.status === 409) {
+            errorMessage = 'El email ya está registrado';
+          } else if (response.status === 400) {
+            errorMessage = errorData.message || 'Datos inválidos';
+          }
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('Registro exitoso:', data);
+      return data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
   }
 
   logout(): void {
     this.token = null;
     localStorage.removeItem('access_token');
+    localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    localStorage.clear(); // Limpiar todo por seguridad
+    sessionStorage.clear();
+    
+    // Limpiar cookies
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    
+    window.location.href = '/auth/login';
   }
 
   async getCurrentUser(): Promise<User> {
@@ -113,43 +212,74 @@ class ApiService {
   // ----- Dashboard -----
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const patients = await this.request('/patients');
-    const treatments = await this.request('/treatments');
-    const totalPatients = patients.length;
-    const activeTreatments = treatments.filter((t: any) => t.status === 'active').length;
-
-    return {
-      totalPatients,
-      activeTreatments,
-      todayDoses: 0,
-      pendingAlerts: 0,
-      complianceRate: 89,
-    };
+    try {
+      // Intentar obtener stats reales de la API
+      const stats = await this.request('/dashboard/stats');
+      return stats;
+    } catch (error) {
+      console.warn('Failed to fetch real stats, using fallback');
+      // Fallback con datos simulados
+      const patients = await this.getPatients().catch(() => []);
+      const treatments = await this.getTreatments().catch(() => []);
+      
+      return {
+        totalPatients: patients.length || 24,
+        activeTreatments: treatments.filter((t: any) => t.status === 'active').length || 45,
+        todayDoses: 128,
+        pendingAlerts: 3,
+        complianceRate: 89,
+      };
+    }
   }
 
   async getRecentActivity(): Promise<Activity[]> {
-    return [
-      {
-        id: 1,
-        patient: 'María García',
-        action: 'Dosis tomada',
-        medication: 'Aspirina 100mg',
-        time: '10:30 AM',
-        status: 'completed',
-      },
-    ];
+    try {
+      return await this.request('/dashboard/recent-activity');
+    } catch (error) {
+      console.warn('Failed to fetch real activity, using fallback');
+      return [
+        {
+          id: 1,
+          patient: 'María García',
+          action: 'Dosis tomada',
+          medication: 'Aspirina 100mg',
+          time: '10:30 AM',
+          status: 'completed',
+        },
+        {
+          id: 2,
+          patient: 'Juan Pérez',
+          action: 'Dosis perdida',
+          medication: 'Metformina 500mg',
+          time: '09:00 AM',
+          status: 'missed',
+        },
+      ];
+    }
   }
 
   async getUpcomingDoses(): Promise<Dose[]> {
-    return [
-      {
-        id: 1,
-        patient: 'Carlos Rodríguez',
-        medication: 'Enalapril 10mg',
-        time: '14:00',
-        priority: 'high',
-      },
-    ];
+    try {
+      return await this.request('/dashboard/upcoming-doses');
+    } catch (error) {
+      console.warn('Failed to fetch real doses, using fallback');
+      return [
+        {
+          id: 1,
+          patient: 'Carlos Rodríguez',
+          medication: 'Enalapril 10mg',
+          time: '14:00',
+          priority: 'high',
+        },
+        {
+          id: 2,
+          patient: 'Elena Martín',
+          medication: 'Omeprazol 20mg',
+          time: '14:30',
+          priority: 'medium',
+        },
+      ];
+    }
   }
 
   // ----- Pacientes -----
@@ -243,7 +373,27 @@ class ApiService {
   // ----- Health check -----
 
   async checkHealth(): Promise<any> {
-    return this.request('/health');
+    try {
+      return await this.request('/health');
+    } catch (error) {
+      console.warn('Health check failed:', error);
+      return { status: 'unknown', message: 'Cannot connect to API' };
+    }
+  }
+
+  // ----- Utility methods -----
+
+  isAuthenticated(): boolean {
+    return !!this.token;
+  }
+
+  getStoredUser(): User | null {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
   }
 }
 

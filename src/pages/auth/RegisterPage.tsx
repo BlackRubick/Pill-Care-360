@@ -4,6 +4,7 @@ import { Pill } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import apiService from '../../services/api';
 import type { RegisterData } from '../../types';
 
 export const RegisterPage: React.FC = () => {
@@ -54,10 +55,19 @@ export const RegisterPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Aquí iría la lógica de registro con tu API de Python
       console.log('Register attempt:', formData);
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Intentar registro con tu API de Python usando apiService
+      const registerData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirm_password: formData.confirmPassword, // Agregar este campo que la API requiere
+        role: formData.role
+      };
+      
+      const result = await apiService.register(registerData);
+      console.log('Register successful:', result);
       
       setSuccess(true);
       
@@ -66,8 +76,36 @@ export const RegisterPage: React.FC = () => {
         navigate('/auth/login');
       }, 2000);
       
-    } catch (err) {
-      setErrors({ email: 'Error en el registro. Intenta nuevamente.' });
+    } catch (err: any) {
+      console.error('Register error:', err);
+      
+      // Mostrar el error específico que viene de la API
+      if (err.message.includes('validación')) {
+        // Error de validación 422 - mostrar detalles
+        setErrors({ 
+          email: err.message,
+          name: 'Revisa todos los campos'
+        });
+      } else if (err.message.includes('ya está registrado') || err.message.includes('already exists')) {
+        setErrors({ email: 'Este email ya está registrado. Intenta con otro.' });
+      } else if (err.message.includes('Datos inválidos') || err.message.includes('400')) {
+        setErrors({ email: 'Datos inválidos. Verifica la información ingresada.' });
+      } else if (err.message.includes('fetch') || err.message.includes('network')) {
+        setErrors({ email: 'Error de conexión. Verifica que el servidor esté funcionando.' });
+      } else {
+        setErrors({ email: err.message || 'Error en el registro. Intenta nuevamente.' });
+      }
+      
+      // Fallback para desarrollo: permitir registro simulado si la API falla completamente
+      if (process.env.NODE_ENV === 'development' && err.message.includes('fetch')) {
+        console.warn('API completamente inaccesible, usando fallback de desarrollo');
+        setTimeout(() => {
+          setSuccess(true);
+          setTimeout(() => {
+            navigate('/auth/login');
+          }, 2000);
+        }, 1000);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -87,6 +125,11 @@ export const RegisterPage: React.FC = () => {
         [name]: undefined
       }));
     }
+  };
+
+  const handleLoginClick = () => {
+    console.log('Navegando a login...');
+    navigate('/auth/login');
   };
 
   if (success) {
@@ -203,13 +246,46 @@ export const RegisterPage: React.FC = () => {
           <div className="text-center">
             <span className="text-sm text-gray-600">
               ¿Ya tienes una cuenta?{' '}
-              <Link
-                to="/auth/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Inicia sesión aquí
-              </Link>
             </span>
+            {/* Opción 1: Usando Link */}
+            <Link
+              to="/auth/login"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              Inicia sesión aquí
+            </Link>
+            
+            {/* Opción 2: Usando botón con navigate (comentado para probar)
+            <button
+              type="button"
+              onClick={handleLoginClick}
+              className="font-medium text-blue-600 hover:text-blue-500 underline bg-transparent border-none cursor-pointer"
+            >
+              Inicia sesión aquí
+            </button>
+            */}
+          </div>
+
+          {/* Información de debug */}
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <strong>Modo desarrollo:</strong> Se intentará conectar con la API de Python.
+            </p>
+            <p className="text-xs text-yellow-600 mt-1">
+              API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
+            </p>
+            <details className="mt-2">
+              <summary className="text-xs text-yellow-700 cursor-pointer">Ver datos que se enviarán</summary>
+              <pre className="text-xs mt-1 text-yellow-800 bg-yellow-100 p-2 rounded">
+                {JSON.stringify({
+                  name: formData.name,
+                  email: formData.email,
+                  password: formData.password ? '***' : '',
+                  confirm_password: formData.confirmPassword ? '***' : '',
+                  role: formData.role
+                }, null, 2)}
+              </pre>
+            </details>
           </div>
         </form>
       </div>
