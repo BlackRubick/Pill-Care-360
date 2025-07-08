@@ -1,28 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Layout } from '../../components/layout/Layout';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Alert } from '../../components/ui/Alert';
-import { ArrowLeft, Plus, X, Save } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Layout } from "../../components/layout/Layout";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Alert } from "../../components/ui/Alert";
+import { ArrowLeft, Plus, X, Save } from "lucide-react";
 
 // Mock del paciente actual
 const mockPatient = {
-  id: '1',
-  name: 'María García López',
-  email: 'maria.garcia@email.com',
-  phone: '+52 961 123 4567',
-  dateOfBirth: '1975-03-15',
-  gender: 'female',
-  address: 'Av. Central 123, Col. Centro, Tuxtla Gutiérrez, Chiapas',
+  id: "1",
+  name: "María García López",
+  email: "maria.garcia@email.com",
+  phone: "+52 961 123 4567",
+  dateOfBirth: "1975-03-15",
+  gender: "female",
+  address: "Av. Central 123, Col. Centro, Tuxtla Gutiérrez, Chiapas",
   emergencyContact: {
-    name: 'José García',
-    phone: '+52 961 765 4321',
-    relationship: 'Esposo'
+    name: "José García",
+    phone: "+52 961 765 4321",
+    relationship: "Esposo",
   },
-  medicalHistory: ['Diabetes Tipo 2', 'Hipertensión'],
-  allergies: ['Penicilina']
+  medicalHistory: ["Diabetes Tipo 2", "Hipertensión"],
+  allergies: ["Penicilina"],
 };
 
 interface EditPatientData {
@@ -30,7 +30,7 @@ interface EditPatientData {
   email: string;
   phone: string;
   dateOfBirth: string;
-  gender: 'male' | 'female' | 'other';
+  gender: "male" | "female" | "other";
   address: string;
   emergencyContact: {
     name: string;
@@ -42,35 +42,35 @@ interface EditPatientData {
 }
 
 const mockUser = {
-  name: 'Dr. Juan Martínez',
-  email: 'doctor@pillcare360.com'
+  name: "Dr. Juan Martínez",
+  email: "doctor@pillcare360.com",
 };
 
 export const EditPatientPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState<EditPatientData>({
-    name: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: 'female',
-    address: '',
+    name: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    gender: "female",
+    address: "",
     emergencyContact: {
-      name: '',
-      phone: '',
-      relationship: ''
+      name: "",
+      phone: "",
+      relationship: "",
     },
     medicalHistory: [],
-    allergies: []
+    allergies: [],
   });
 
   const [errors, setErrors] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [newMedicalCondition, setNewMedicalCondition] = useState('');
-  const [newAllergy, setNewAllergy] = useState('');
+  const [newMedicalCondition, setNewMedicalCondition] = useState("");
+  const [newAllergy, setNewAllergy] = useState("");
 
   // Cargar datos del paciente al montar el componente
   useEffect(() => {
@@ -80,53 +80,56 @@ export const EditPatientPage: React.FC = () => {
       email: mockPatient.email,
       phone: mockPatient.phone,
       dateOfBirth: mockPatient.dateOfBirth,
-      gender: mockPatient.gender as 'male' | 'female' | 'other',
+      gender: mockPatient.gender as "male" | "female" | "other",
       address: mockPatient.address,
       emergencyContact: mockPatient.emergencyContact,
       medicalHistory: [...mockPatient.medicalHistory],
-      allergies: [...mockPatient.allergies]
+      allergies: [...mockPatient.allergies],
     });
   }, [id]);
 
   const handleLogout = () => {
-    console.log('Logging out...');
+    console.log("Logging out...");
   };
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'El nombre es requerido';
+      newErrors.name = "El nombre es requerido";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'El email es requerido';
+      newErrors.email = "El email es requerido";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
+      newErrors.email = "Email inválido";
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'El teléfono es requerido';
+      newErrors.phone = "El teléfono es requerido";
     }
 
     if (!formData.dateOfBirth) {
-      newErrors.dateOfBirth = 'La fecha de nacimiento es requerida';
+      newErrors.dateOfBirth = "La fecha de nacimiento es requerida";
     }
 
     if (!formData.address.trim()) {
-      newErrors.address = 'La dirección es requerida';
+      newErrors.address = "La dirección es requerida";
     }
 
     if (!formData.emergencyContact.name.trim()) {
-      newErrors.emergencyContactName = 'El nombre del contacto de emergencia es requerido';
+      newErrors.emergencyContactName =
+        "El nombre del contacto de emergencia es requerido";
     }
 
     if (!formData.emergencyContact.phone.trim()) {
-      newErrors.emergencyContactPhone = 'El teléfono del contacto de emergencia es requerido';
+      newErrors.emergencyContactPhone =
+        "El teléfono del contacto de emergencia es requerido";
     }
 
     if (!formData.emergencyContact.relationship.trim()) {
-      newErrors.emergencyContactRelationship = 'La relación del contacto de emergencia es requerida';
+      newErrors.emergencyContactRelationship =
+        "La relación del contacto de emergencia es requerida";
     }
 
     setErrors(newErrors);
@@ -135,45 +138,49 @@ export const EditPatientPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      console.log('Updating patient:', formData);
-      
+      console.log("Updating patient:", formData);
+
       // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         navigate(`/patients/${id}`);
       }, 2000);
     } catch (error) {
-      console.error('Error updating patient:', error);
+      console.error("Error updating patient:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
-    
-    if (name.startsWith('emergencyContact.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
+
+    if (name.startsWith("emergencyContact.")) {
+      const field = name.split(".")[1];
+      setFormData((prev) => ({
         ...prev,
         emergencyContact: {
           ...prev.emergencyContact,
-          [field]: value
-        }
+          [field]: value,
+        },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
 
@@ -181,42 +188,42 @@ export const EditPatientPage: React.FC = () => {
     if (errors[name]) {
       setErrors((prev: any) => ({
         ...prev,
-        [name]: undefined
+        [name]: undefined,
       }));
     }
   };
 
   const addMedicalCondition = () => {
     if (newMedicalCondition.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        medicalHistory: [...prev.medicalHistory, newMedicalCondition.trim()]
+        medicalHistory: [...prev.medicalHistory, newMedicalCondition.trim()],
       }));
-      setNewMedicalCondition('');
+      setNewMedicalCondition("");
     }
   };
 
   const removeMedicalCondition = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      medicalHistory: prev.medicalHistory.filter((_, i) => i !== index)
+      medicalHistory: prev.medicalHistory.filter((_, i) => i !== index),
     }));
   };
 
   const addAllergy = () => {
     if (newAllergy.trim()) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        allergies: [...prev.allergies, newAllergy.trim()]
+        allergies: [...prev.allergies, newAllergy.trim()],
       }));
-      setNewAllergy('');
+      setNewAllergy("");
     }
   };
 
   const removeAllergy = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      allergies: prev.allergies.filter((_, i) => i !== index)
+      allergies: prev.allergies.filter((_, i) => i !== index),
     }));
   };
 
@@ -234,17 +241,18 @@ export const EditPatientPage: React.FC = () => {
             <span>Volver</span>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Editar Paciente</h1>
-            <p className="text-gray-600">Modifica la información del paciente</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Editar Paciente
+            </h1>
+            <p className="text-gray-600">
+              Modifica la información del paciente
+            </p>
           </div>
         </div>
 
         {/* Alert de éxito */}
         {showSuccess && (
-          <Alert
-            type="success"
-            message="Paciente actualizado correctamente"
-          />
+          <Alert type="success" message="Paciente actualizado correctamente" />
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -369,7 +377,10 @@ export const EditPatientPage: React.FC = () => {
                     onChange={(e) => setNewMedicalCondition(e.target.value)}
                     placeholder="Ej: Diabetes, Hipertensión"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addMedicalCondition())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" &&
+                      (e.preventDefault(), addMedicalCondition())
+                    }
                   />
                   <Button
                     type="button"
@@ -411,7 +422,9 @@ export const EditPatientPage: React.FC = () => {
                     onChange={(e) => setNewAllergy(e.target.value)}
                     placeholder="Ej: Penicilina, Mariscos"
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAllergy())}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), addAllergy())
+                    }
                   />
                   <Button
                     type="button"
@@ -448,15 +461,19 @@ export const EditPatientPage: React.FC = () => {
           <Card title="Información del Sistema">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm font-medium text-gray-500">Paciente registrado</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Paciente registrado
+                </p>
                 <p className="text-gray-900">
-                  {new Date(mockPatient.createdAt || Date.now()).toLocaleDateString('es-ES')}
+                  {new Date().toLocaleDateString("es-ES")}{" "}
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Última actualización</p>
+                <p className="text-sm font-medium text-gray-500">
+                  Última actualización
+                </p>
                 <p className="text-gray-900">
-                  {new Date().toLocaleDateString('es-ES')}
+                  {new Date().toLocaleDateString("es-ES")}
                 </p>
               </div>
             </div>
