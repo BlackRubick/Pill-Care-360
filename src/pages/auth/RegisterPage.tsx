@@ -266,27 +266,7 @@ export const RegisterPage: React.FC = () => {
             */}
           </div>
 
-          {/* Información de debug */}
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
-              <strong>Modo desarrollo:</strong> Se intentará conectar con la API de Python.
-            </p>
-            <p className="text-xs text-yellow-600 mt-1">
-              API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
-            </p>
-            <details className="mt-2">
-              <summary className="text-xs text-yellow-700 cursor-pointer">Ver datos que se enviarán</summary>
-              <pre className="text-xs mt-1 text-yellow-800 bg-yellow-100 p-2 rounded">
-                {JSON.stringify({
-                  name: formData.name,
-                  email: formData.email,
-                  password: formData.password ? '***' : '',
-                  confirm_password: formData.confirmPassword ? '***' : '',
-                  role: formData.role
-                }, null, 2)}
-              </pre>
-            </details>
-          </div>
+
         </form>
       </div>
     </div>
