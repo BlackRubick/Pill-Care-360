@@ -98,9 +98,7 @@ export const TreatmentsPage: React.FC = () => {
   const filteredTreatments = treatments.filter(treatment => {
     const matchesSearch = 
       treatment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      treatment.medication?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      treatment.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      treatment.medication_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      treatment.medication?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === '' || treatment.status === statusFilter;
     
@@ -172,18 +170,12 @@ export const TreatmentsPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'active':
-      case 'activo':
         return <Badge variant="success">Activo</Badge>;
       case 'suspended':
-      case 'suspendido':
-      case 'paused':
-      case 'pausado':
         return <Badge variant="warning">Suspendido</Badge>;
       case 'completed':
-      case 'completado':
         return <Badge variant="secondary">Completado</Badge>;
       case 'cancelled':
-      case 'cancelado':
         return <Badge variant="danger">Cancelado</Badge>;
       default:
         return <Badge variant="secondary">{status || 'Desconocido'}</Badge>;
@@ -225,9 +217,9 @@ export const TreatmentsPage: React.FC = () => {
 
   // Calcular estadísticas
   const stats = {
-    active: treatments.filter(t => t.status === 'active' || t.status === 'activo').length,
-    suspended: treatments.filter(t => t.status === 'suspended' || t.status === 'pausado').length,
-    completed: treatments.filter(t => t.status === 'completed' || t.status === 'completado').length,
+    active: treatments.filter(t => t.status === 'active').length,
+    suspended: treatments.filter(t => t.status === 'suspended').length,
+    completed: treatments.filter(t => t.status === 'completed').length,
     totalAlarms: treatments.reduce((total, t) => total + (t.alarms?.length || 0), 0)
   };
 
@@ -381,13 +373,13 @@ export const TreatmentsPage: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <User size={16} className="text-gray-400" />
                           <span className="text-sm font-medium text-gray-900">
-                            {treatment.patient?.name || treatment.patient_name || 'Paciente desconocido'}
+                            {treatment.patient?.name || 'Paciente desconocido'}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2 mt-1">
                           <Pill size={16} className="text-gray-400" />
                           <span className="text-sm text-gray-600">
-                            {treatment.medication?.name || treatment.medication_name || 'Medicamento'} {treatment.dosage}
+                            {treatment.medication?.name || 'Medicamento'} {treatment.dosage}
                           </span>
                         </div>
                       </div>
@@ -405,11 +397,11 @@ export const TreatmentsPage: React.FC = () => {
                         {treatment.duration} días
                       </div>
                       <div className="text-sm text-gray-500">
-                        {formatDate(treatment.start_date)} - {formatDate(treatment.end_date)}
+                        {formatDate(treatment.startDate)} - {formatDate(treatment.endDate)}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {getDaysRemaining(treatment.end_date) > 0 
-                          ? `${getDaysRemaining(treatment.end_date)} días restantes`
+                        {getDaysRemaining(treatment.endDate) > 0 
+                          ? `${getDaysRemaining(treatment.endDate)} días restantes`
                           : 'Finalizado'
                         }
                       </div>
@@ -420,7 +412,7 @@ export const TreatmentsPage: React.FC = () => {
                           <div key={index} className="flex items-center space-x-1 text-sm text-gray-600">
                             <Clock size={12} />
                             <span>{alarm.time}</span>
-                            {alarm.isActive || alarm.is_active ? (
+                            {alarm.isActive ? (
                               <span className="text-green-600">●</span>
                             ) : (
                               <span className="text-gray-400">●</span>
@@ -522,9 +514,9 @@ export const TreatmentsPage: React.FC = () => {
             <p className="text-gray-600">
               ¿Estás seguro de que deseas eliminar el tratamiento de{' '}
               <span className="font-semibold">
-                {selectedTreatment?.medication?.name || selectedTreatment?.medication_name}
+                {selectedTreatment?.medication?.name}
               </span>{' '}
-              para {selectedTreatment?.patient?.name || selectedTreatment?.patient_name}?
+              para {selectedTreatment?.patient?.name}?
             </p>
             <p className="text-sm text-red-600">
               Esta acción no se puede deshacer y eliminará todas las alarmas y registros asociados.
