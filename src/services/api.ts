@@ -802,7 +802,7 @@ class ApiService {
 
   async getTreatments(params: Record<string, any> = {}): Promise<any[]> {
     const queryString = new URLSearchParams(params).toString();
-    return this.request(`/treatments?${queryString}`);
+    return this.request(`/treatments/?${queryString}`);
   }
 
   async getTreatment(id: number): Promise<any> {
