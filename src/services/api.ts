@@ -45,7 +45,7 @@ class ApiService {
   token: string | null;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    this.baseURL = import.meta.env.VITE_API_URL || 'http://18.234.171.119:8000/api';
     this.token = localStorage.getItem('access_token');
   }
 
