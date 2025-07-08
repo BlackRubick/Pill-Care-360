@@ -18,7 +18,8 @@ import {
   Pause,
   CheckCircle,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Bug
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import apiService from '../../services/api';
@@ -44,6 +45,10 @@ export const TreatmentsPage: React.FC = () => {
 
   // Usuario actual
   const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  // Estado de debug
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -59,10 +64,13 @@ export const TreatmentsPage: React.FC = () => {
       const user = apiService.getStoredUser();
       setCurrentUser(user);
       
+      console.log('👤 Usuario actual:', user);
+      console.log('🔐 Token presente:', !!localStorage.getItem("access_token"));
+      
       // Cargar tratamientos del usuario
       await loadTreatments();
     } catch (err: any) {
-      console.error('Error cargando datos iniciales:', err);
+      console.error('💥 Error cargando datos iniciales:', err);
       setError(err.message || 'Error cargando los datos');
     } finally {
       setLoading(false);
@@ -71,22 +79,138 @@ export const TreatmentsPage: React.FC = () => {
 
   const loadTreatments = async () => {
     try {
-      console.log('🔄 Cargando tratamientos...');
+      console.log('🔄 Iniciando carga de tratamientos...');
       
-      // Obtener tratamientos del usuario actual
-      const userTreatments = await apiService.getUserTreatments();
+      // Debug: Información del usuario y autenticación
+      const user = apiService.getStoredUser();
+      const token = localStorage.getItem("access_token");
       
-      console.log('✅ Tratamientos cargados:', userTreatments);
-      setTreatments(userTreatments);
+      const debugData = {
+        user: user,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        baseURL: (apiService as any).baseURL,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📊 Debug Info:', debugData);
+      setDebugInfo(debugData);
+      
+      // Método 1: Intentar getUserTreatments
+      console.log('🔍 Método 1: Intentando getUserTreatments...');
+      try {
+        const userTreatments = await apiService.getUserTreatments();
+        console.log('✅ getUserTreatments exitoso:', userTreatments);
+        setTreatments(userTreatments);
+        return; // Si funciona, salir
+      } catch (error1) {
+        console.log('❌ getUserTreatments falló:', error1);
+      }
+
+      // Método 2: Intentar getTreatments directo
+      console.log('🔍 Método 2: Intentando getTreatments directo...');
+      try {
+        const allTreatments = await apiService.getTreatments();
+        console.log('✅ getTreatments exitoso:', allTreatments);
+        setTreatments(allTreatments);
+        return; // Si funciona, salir
+      } catch (error2) {
+        console.log('❌ getTreatments falló:', error2);
+      }
+
+      // Método 3: Intentar con parámetros específicos
+      console.log('🔍 Método 3: Intentando con parámetros específicos...');
+      try {
+        const params = user?.id ? { caregiver_id: user.id } : {};
+        const paramTreatments = await apiService.getTreatments(params);
+        console.log('✅ getTreatments con parámetros exitoso:', paramTreatments);
+        setTreatments(paramTreatments);
+        return; // Si funciona, salir
+      } catch (error3) {
+        console.log('❌ getTreatments con parámetros falló:', error3);
+      }
+
+      // Método 4: Probar endpoints alternativos
+      console.log('🔍 Método 4: Probando endpoints alternativos...');
+      try {
+        // Intentar con request directo
+        const directResponse = await (apiService as any).request('/treatments/');
+        console.log('✅ Request directo exitoso:', directResponse);
+        setTreatments(Array.isArray(directResponse) ? directResponse : []);
+        return;
+      } catch (error4) {
+        console.log('❌ Request directo falló:', error4);
+      }
+
+      // Si todos los métodos fallan
+      throw new Error('No se pudo cargar los tratamientos por ningún método');
+      
     } catch (err: any) {
-      console.error('❌ Error cargando tratamientos:', err);
+      console.error('❌ Error final cargando tratamientos:', err);
       
       if (err.message.includes('401') || err.message.includes('Sesión expirada')) {
-        handleLogout();
+        setError('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        // handleLogout();
         return;
       }
       
-      throw new Error('Error cargando los tratamientos: ' + err.message);
+      setError('Error cargando los tratamientos: ' + err.message);
+    }
+  };
+
+  // Función de debug manual
+  const runDebugTests = async () => {
+    console.log('🐛 Iniciando tests de debug...');
+    
+    try {
+      // Test 1: Verificar salud de la API
+      console.log('\n🏥 Test 1: Health check...');
+      try {
+        const health = await apiService.checkHealth();
+        console.log('✅ Health check:', health);
+      } catch (e) {
+        console.log('❌ Health check falló:', e);
+      }
+
+      // Test 2: Verificar usuario actual
+      console.log('\n👤 Test 2: Usuario actual...');
+      try {
+        const currentUserAPI = await apiService.getCurrentUser();
+        console.log('✅ Usuario desde API:', currentUserAPI);
+      } catch (e) {
+        console.log('❌ getCurrentUser falló:', e);
+      }
+
+      // Test 3: Verificar pacientes (para contexto)
+      console.log('\n👥 Test 3: Pacientes...');
+      try {
+        const patients = await apiService.getPatients();
+        console.log('✅ Pacientes:', patients);
+      } catch (e) {
+        console.log('❌ getPatients falló:', e);
+      }
+
+      // Test 4: Probar diferentes endpoints de tratamientos
+      console.log('\n💊 Test 4: Endpoints de tratamientos...');
+      const endpointsToTest = [
+        '/treatments/',
+        '/treatments',
+        '/api/treatments/',
+        '/api/treatments'
+      ];
+
+      for (const endpoint of endpointsToTest) {
+        try {
+          console.log(`Probando: ${endpoint}`);
+          const response = await (apiService as any).request(endpoint);
+          console.log(`✅ ${endpoint}:`, response);
+        } catch (e) {
+          console.log(`❌ ${endpoint}:`, e);
+        }
+      }
+
+    } catch (error) {
+      console.error('💥 Error en debug tests:', error);
     }
   };
 
@@ -248,6 +372,14 @@ export const TreatmentsPage: React.FC = () => {
           <div className="flex space-x-3">
             <Button
               variant="outline"
+              onClick={() => setShowDebug(!showDebug)}
+              className="flex items-center space-x-2"
+            >
+              <Bug size={16} />
+              <span>Debug</span>
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleRefresh}
               className="flex items-center space-x-2"
               disabled={loading}
@@ -264,6 +396,37 @@ export const TreatmentsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Debug Info */}
+        {showDebug && (
+          <Card className="border-blue-200 bg-blue-50">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-blue-800">Información de Debug</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={runDebugTests}
+                  className="flex items-center space-x-2"
+                >
+                  <Bug size={14} />
+                  <span>Ejecutar Tests</span>
+                </Button>
+              </div>
+              <div className="text-sm text-blue-700">
+                <pre className="bg-blue-100 p-3 rounded text-xs overflow-auto">
+                  {JSON.stringify({
+                    debugInfo,
+                    treatmentsCount: treatments.length,
+                    filteredCount: filteredTreatments.length,
+                    currentError: error,
+                    currentUser: currentUser?.name || 'No user'
+                  }, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Error Alert */}
         {error && (
           <Card className="border-red-200 bg-red-50">
@@ -279,6 +442,15 @@ export const TreatmentsPage: React.FC = () => {
             </div>
           </Card>
         )}
+
+        {/* Status Info */}
+        <Card className="border-blue-200 bg-blue-50">
+          <div className="text-sm text-blue-700">
+            <strong>Estado actual:</strong> {treatments.length} tratamientos cargados 
+            {currentUser && <span> | Usuario: {currentUser.name || currentUser.email}</span>}
+            {debugInfo && <span> | API: {debugInfo.baseURL}</span>}
+          </div>
+        </Card>
 
         {/* Filtros y búsqueda */}
         <Card>
@@ -484,10 +656,12 @@ export const TreatmentsPage: React.FC = () => {
                   <p className="text-gray-500">
                     {searchTerm || statusFilter
                       ? 'Intenta con otros filtros de búsqueda'
-                      : 'Comienza creando tu primer tratamiento'
+                      : treatments.length === 0 
+                        ? 'No hay tratamientos en la base de datos'
+                        : 'Comienza creando tu primer tratamiento'
                     }
                   </p>
-                  {!searchTerm && !statusFilter && (
+                  {!searchTerm && !statusFilter && treatments.length === 0 && (
                     <Link to="/treatments/create" className="mt-4 inline-block">
                       <Button>
                         <Plus size={16} className="mr-2" />
