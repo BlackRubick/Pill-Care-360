@@ -1082,7 +1082,7 @@ async createTestTreatment(): Promise<void> {
   } catch (error) {
     console.error("❌ Error creando tratamiento de prueba:", error);
   }
-}
+} 
 
   // Métodos específicos para alarmas de tratamientos
   async getTreatmentAlarms(treatmentId: number): Promise<any[]> {
