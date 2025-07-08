@@ -195,29 +195,7 @@ export const LoginPage: React.FC = () => {
             */}
           </div>
 
-          {/* Mensaje de prueba actualizado */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              <strong>Conectado a API:</strong> Se validarán las credenciales con el servidor de Python.
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              API URL: {import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
-            </p>
-            <p className="text-xs text-blue-500 mt-1">
-              💡 Primero regístrate si no tienes una cuenta
-            </p>
-          </div>
 
-          {/* Botón de prueba para verificar navegación */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={handleRegisterClick}
-              className="text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              [Debug] Ir a Registro
-            </button>
-          </div>
         </form>
       </div>
     </div>
