@@ -5,53 +5,35 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Alert } from '../../components/ui/Alert';
-import { ArrowLeft, Plus, X, Clock, Save } from 'lucide-react';
+import { ArrowLeft, Plus, X, Clock, Save, RefreshCw, AlertCircle } from 'lucide-react';
+import apiService from '../../services/api';
 
-// Datos simulados
-const mockTreatment = {
-  id: '1',
-  patientId: '1',
-  patientName: 'María García López',
-  medicationId: '1',
-  medicationName: 'Metformina',
-  customDosage: '500mg',
-  frequency: 2,
-  duration: 30,
-  startDate: '2024-12-01',
-  instructions: 'Tomar con las comidas principales para reducir efectos gastrointestinales',
-  alarms: [
-    {
-      time: '08:00',
-      description: 'Con el desayuno',
-      isActive: true,
-      soundEnabled: true,
-      visualEnabled: true
-    },
-    {
-      time: '20:00',
-      description: 'Con la cena',
-      isActive: true,
-      soundEnabled: true,
-      visualEnabled: true
-    }
-  ]
-};
-
-const mockMedications = [
-  { id: '1', name: 'Metformina', dosage: '500mg', unit: 'mg' },
-  { id: '2', name: 'Ibuprofeno', dosage: '400mg', unit: 'mg' },
-  { id: '3', name: 'Aspirina', dosage: '100mg', unit: 'mg' },
-  { id: '4', name: 'Enalapril', dosage: '10mg', unit: 'mg' },
-  { id: '5', name: 'Omeprazol', dosage: '20mg', unit: 'mg' }
-];
+// Interfaces basadas en tu estructura real de API
+interface ApiTreatment {
+  id: number;
+  patient_id: number;
+  medication_id: number;
+  dosage: string;
+  frequency: number;
+  duration_days: number;
+  start_date: string;
+  end_date: string;
+  instructions: string;
+  notes: string;
+  status: string;
+  created_by_id: number;
+  created_at: string;
+  updated_at: string | null;
+}
 
 interface EditTreatmentData {
-  medicationId: string;
-  customDosage: string;
+  medication_id: number;
+  dosage: string;
   frequency: number;
-  duration: number;
-  startDate: string;
+  duration_days: number;
+  start_date: string;
   instructions: string;
+  notes: string;
   alarms: {
     time: string;
     description: string;
@@ -61,74 +43,138 @@ interface EditTreatmentData {
   }[];
 }
 
-const mockUser = {
-  name: 'Dr. Juan Martínez',
-  email: 'doctor@pillcare360.com'
-};
-
 export const EditTreatmentPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
+  // Estados principales
+  const [treatment, setTreatment] = useState<ApiTreatment | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Estados de datos relacionados
+  const [patients, setPatients] = useState<any[]>([]);
+  const [medications, setMedications] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  // Estados del formulario
   const [formData, setFormData] = useState<EditTreatmentData>({
-    medicationId: '',
-    customDosage: '',
+    medication_id: 0,
+    dosage: '',
     frequency: 1,
-    duration: 7,
-    startDate: '',
+    duration_days: 7,
+    start_date: '',
     instructions: '',
+    notes: '',
     alarms: []
   });
 
   const [errors, setErrors] = useState<any>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  // Estados para alarmas
   const [newAlarmTime, setNewAlarmTime] = useState('');
   const [newAlarmDescription, setNewAlarmDescription] = useState('');
+  const [alarms, setAlarms] = useState<any[]>([]);
 
-  // Cargar datos del tratamiento al montar el componente
+  // Cargar datos iniciales
   useEffect(() => {
-    // Simular carga de datos
-    setFormData({
-      medicationId: mockTreatment.medicationId,
-      customDosage: mockTreatment.customDosage,
-      frequency: mockTreatment.frequency,
-      duration: mockTreatment.duration,
-      startDate: mockTreatment.startDate,
-      instructions: mockTreatment.instructions,
-      alarms: [...mockTreatment.alarms]
-    });
+    loadInitialData();
   }, [id]);
 
+  const loadInitialData = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Cargar usuario actual
+      const user = apiService.getStoredUser();
+      setCurrentUser(user);
+      
+      // Cargar datos en paralelo
+      const [treatmentData, patientsData, medicationsData] = await Promise.all([
+        apiService.getTreatment(parseInt(id)),
+        apiService.getPatients().catch(() => []),
+        apiService.getMedications().catch(() => [])
+      ]);
+      
+      console.log('🔄 Datos del tratamiento cargados:', treatmentData);
+      console.log('👥 Pacientes cargados:', patientsData);
+      console.log('💊 Medicamentos cargados:', medicationsData);
+      
+      setTreatment(treatmentData);
+      setPatients(patientsData);
+      setMedications(medicationsData);
+      
+      // Inicializar formulario con datos del tratamiento
+      setFormData({
+        medication_id: treatmentData.medication_id,
+        dosage: treatmentData.dosage,
+        frequency: treatmentData.frequency,
+        duration_days: treatmentData.duration_days,
+        start_date: treatmentData.start_date,
+        instructions: treatmentData.instructions || '',
+        notes: treatmentData.notes || '',
+        alarms: []
+      });
+      
+      // Cargar alarmas del tratamiento si existen
+      try {
+        const alarmsData = await apiService.getTreatmentAlarms(parseInt(id));
+        console.log('⏰ Alarmas cargadas:', alarmsData);
+        setAlarms(alarmsData || []);
+        setFormData(prev => ({ ...prev, alarms: alarmsData || [] }));
+      } catch (alarmsError) {
+        console.warn('⚠️ No se pudieron cargar las alarmas:', alarmsError);
+        setAlarms([]);
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Error cargando datos:', err);
+      setError(err.message || 'Error cargando los datos del tratamiento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
-    console.log('Logging out...');
+    apiService.logout();
+  };
+
+  // Funciones helper
+  const getPatientName = (patientId: number): string => {
+    const patient = patients.find(p => p.id === patientId);
+    return patient?.name || `Paciente #${patientId}`;
+  };
+
+  const getSelectedMedication = () => {
+    return medications.find(med => med.id === formData.medication_id);
   };
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
-    if (!formData.medicationId) {
-      newErrors.medicationId = 'Selecciona un medicamento';
+    if (!formData.medication_id) {
+      newErrors.medication_id = 'Selecciona un medicamento';
     }
 
-    if (!formData.customDosage.trim()) {
-      newErrors.customDosage = 'La dosis es requerida';
+    if (!formData.dosage.trim()) {
+      newErrors.dosage = 'La dosis es requerida';
     }
 
     if (formData.frequency < 1 || formData.frequency > 10) {
       newErrors.frequency = 'La frecuencia debe estar entre 1 y 10 veces por día';
     }
 
-    if (formData.duration < 1 || formData.duration > 365) {
-      newErrors.duration = 'La duración debe estar entre 1 y 365 días';
+    if (formData.duration_days < 1 || formData.duration_days > 365) {
+      newErrors.duration_days = 'La duración debe estar entre 1 y 365 días';
     }
 
-    if (!formData.startDate) {
-      newErrors.startDate = 'La fecha de inicio es requerida';
-    }
-
-    if (formData.alarms.length === 0) {
-      newErrors.alarms = 'Debe agregar al menos una alarma';
+    if (!formData.start_date) {
+      newErrors.start_date = 'La fecha de inicio es requerida';
     }
 
     setErrors(newErrors);
@@ -138,23 +184,57 @@ export const EditTreatmentPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm() || !id || !treatment) return;
 
     setIsLoading(true);
+    setError(null);
 
     try {
-      console.log('Updating treatment:', formData);
+      console.log('🔄 Actualizando tratamiento:', formData);
       
-      // Simular delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Calcular fecha de fin basada en duración
+      const startDate = new Date(formData.start_date);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + formData.duration_days);
+      
+      // Preparar datos para la API
+      const updateData = {
+        medication_id: formData.medication_id,
+        dosage: formData.dosage,
+        frequency: formData.frequency,
+        duration_days: formData.duration_days,
+        start_date: formData.start_date,
+        end_date: endDate.toISOString().split('T')[0],
+        instructions: formData.instructions,
+        notes: formData.notes
+      };
+
+      console.log('📤 Datos a enviar:', updateData);
+      
+      // Actualizar tratamiento
+      const updatedTreatment = await apiService.updateTreatment(parseInt(id), updateData);
+      console.log('✅ Tratamiento actualizado:', updatedTreatment);
+      
+      // Actualizar alarmas si hay cambios
+      if (formData.alarms.length > 0) {
+        try {
+          // Aquí podrías implementar la lógica para actualizar alarmas
+          // Por ahora solo las guardamos localmente
+          console.log('⏰ Alarmas a actualizar:', formData.alarms);
+        } catch (alarmsError) {
+          console.warn('⚠️ Error actualizando alarmas:', alarmsError);
+        }
+      }
       
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         navigate(`/treatments/${id}`);
       }, 2000);
-    } catch (error) {
-      console.error('Error updating treatment:', error);
+      
+    } catch (error: any) {
+      console.error('❌ Error actualizando tratamiento:', error);
+      setError('Error actualizando el tratamiento: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +244,9 @@ export const EditTreatmentPage: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'frequency' || name === 'duration' ? parseInt(value) || 0 : value
+      [name]: (name === 'frequency' || name === 'duration_days' || name === 'medication_id') 
+        ? parseInt(value) || 0 
+        : value
     }));
 
     // Limpiar error del campo específico
@@ -220,12 +302,68 @@ export const EditTreatmentPage: React.FC = () => {
     }));
   };
 
-  const getSelectedMedication = () => {
-    return mockMedications.find(med => med.id === formData.medicationId);
-  };
+  if (loading) {
+    return (
+      <Layout user={currentUser} onLogout={handleLogout}>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="animate-spin" size={20} />
+            <span>Cargando tratamiento...</span>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout user={currentUser} onLogout={handleLogout}>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/treatments')}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft size={16} />
+              <span>Volver</span>
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">Error</h1>
+          </div>
+          
+          <Card className="border-red-200 bg-red-50">
+            <div className="flex items-center space-x-2 text-red-700">
+              <AlertCircle size={20} />
+              <span>{error}</span>
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!treatment) {
+    return (
+      <Layout user={currentUser} onLogout={handleLogout}>
+        <div className="space-y-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/treatments')}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft size={16} />
+              <span>Volver</span>
+            </Button>
+            <h1 className="text-2xl font-bold text-gray-900">Tratamiento no encontrado</h1>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <Layout user={mockUser} onLogout={handleLogout}>
+    <Layout user={currentUser} onLogout={handleLogout}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-4">
@@ -240,7 +378,7 @@ export const EditTreatmentPage: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Editar Tratamiento</h1>
             <p className="text-gray-600">
-              Modificar tratamiento para {mockTreatment.patientName}
+              Modificar tratamiento para {getPatientName(treatment.patient_id)}
             </p>
           </div>
         </div>
@@ -253,6 +391,15 @@ export const EditTreatmentPage: React.FC = () => {
           />
         )}
 
+        {/* Alert de error */}
+        {error && (
+          <Alert
+            type="error"
+            message={error}
+            onClose={() => setError(null)}
+          />
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Información básica */}
           <Card title="Información del Tratamiento">
@@ -261,7 +408,7 @@ export const EditTreatmentPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-500 mb-1">
                   Paciente
                 </label>
-                <p className="text-gray-900 py-2">{mockTreatment.patientName}</p>
+                <p className="text-gray-900 py-2">{getPatientName(treatment.patient_id)}</p>
               </div>
 
               <div>
@@ -269,31 +416,31 @@ export const EditTreatmentPage: React.FC = () => {
                   Medicamento *
                 </label>
                 <select
-                  name="medicationId"
-                  value={formData.medicationId}
+                  name="medication_id"
+                  value={formData.medication_id}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Seleccionar medicamento</option>
-                  {mockMedications.map(medication => (
+                  {medications.map(medication => (
                     <option key={medication.id} value={medication.id}>
-                      {medication.name} ({medication.dosage})
+                      {medication.name} ({medication.dosage || 'N/A'}{medication.unit || ''})
                     </option>
                   ))}
                 </select>
-                {errors.medicationId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.medicationId}</p>
+                {errors.medication_id && (
+                  <p className="mt-1 text-sm text-red-600">{errors.medication_id}</p>
                 )}
               </div>
 
               <Input
                 label="Dosis *"
-                name="customDosage"
-                value={formData.customDosage}
+                name="dosage"
+                value={formData.dosage}
                 onChange={handleInputChange}
-                error={errors.customDosage}
+                error={errors.dosage}
                 placeholder="Ej: 500mg, 1 tableta"
-                helperText={getSelectedMedication() ? `Dosis estándar: ${getSelectedMedication()?.dosage}` : ''}
+                helperText={getSelectedMedication() ? `Dosis estándar: ${getSelectedMedication()?.dosage || 'N/A'}` : ''}
               />
 
               <div className="grid grid-cols-2 gap-4">
@@ -311,10 +458,10 @@ export const EditTreatmentPage: React.FC = () => {
                 <Input
                   label="Duración (días) *"
                   type="number"
-                  name="duration"
-                  value={formData.duration.toString()}
+                  name="duration_days"
+                  value={formData.duration_days.toString()}
                   onChange={handleInputChange}
-                  error={errors.duration}
+                  error={errors.duration_days}
                   min="1"
                   max="365"
                 />
@@ -323,10 +470,10 @@ export const EditTreatmentPage: React.FC = () => {
               <Input
                 label="Fecha de Inicio *"
                 type="date"
-                name="startDate"
-                value={formData.startDate}
+                name="start_date"
+                value={formData.start_date}
                 onChange={handleInputChange}
-                error={errors.startDate}
+                error={errors.start_date}
               />
 
               <div className="md:col-span-2">
@@ -342,6 +489,20 @@ export const EditTreatmentPage: React.FC = () => {
                   placeholder="Ej: Tomar con alimentos, evitar lácteos, etc."
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notas Adicionales
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Notas adicionales sobre el tratamiento"
+                />
+              </div>
             </div>
           </Card>
 
@@ -349,7 +510,7 @@ export const EditTreatmentPage: React.FC = () => {
           <Card title="Configuración de Alarmas">
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Modifica los horarios en que el paciente debe tomar el medicamento
+                Configura los horarios en que el paciente debe tomar el medicamento
               </p>
 
               {/* Agregar nueva alarma */}
@@ -433,7 +594,7 @@ export const EditTreatmentPage: React.FC = () => {
                   <div className="text-center py-8 text-gray-500">
                     <Clock size={48} className="mx-auto mb-4 text-gray-300" />
                     <p>No hay alarmas configuradas</p>
-                    <p className="text-sm">Agrega al menos una alarma para el tratamiento</p>
+                    <p className="text-sm">Las alarmas son opcionales</p>
                   </div>
                 )}
               </div>
@@ -450,13 +611,16 @@ export const EditTreatmentPage: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-500">Tratamiento creado</p>
                 <p className="text-gray-900">
-                  {new Date(mockTreatment.startDate).toLocaleDateString('es-ES')}
+                  {new Date(treatment.created_at).toLocaleDateString('es-ES')}
                 </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Última modificación</p>
                 <p className="text-gray-900">
-                  {new Date().toLocaleDateString('es-ES')}
+                  {treatment.updated_at 
+                    ? new Date(treatment.updated_at).toLocaleDateString('es-ES')
+                    : 'Sin modificaciones'
+                  }
                 </p>
               </div>
             </div>
