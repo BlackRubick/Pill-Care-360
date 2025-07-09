@@ -76,7 +76,6 @@ export const EditTreatmentPage: React.FC = () => {
   // Estados para alarmas
   const [newAlarmTime, setNewAlarmTime] = useState('');
   const [newAlarmDescription, setNewAlarmDescription] = useState('');
-  const [alarms, setAlarms] = useState<any[]>([]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -94,42 +93,94 @@ export const EditTreatmentPage: React.FC = () => {
       const user = apiService.getStoredUser();
       setCurrentUser(user);
       
+      console.log('🔄 Cargando datos para tratamiento ID:', id);
+      
       // Cargar datos en paralelo
-      const [treatmentData, patientsData, medicationsData] = await Promise.all([
-        apiService.getTreatment(parseInt(id)),
+      const [patientsData, medicationsData] = await Promise.all([
         apiService.getPatients().catch(() => []),
         apiService.getMedications().catch(() => [])
       ]);
       
-      console.log('🔄 Datos del tratamiento cargados:', treatmentData);
       console.log('👥 Pacientes cargados:', patientsData);
       console.log('💊 Medicamentos cargados:', medicationsData);
       
-      setTreatment(treatmentData);
       setPatients(patientsData);
       setMedications(medicationsData);
       
-      // Inicializar formulario con datos del tratamiento
-      setFormData({
-        medication_id: treatmentData.medication_id,
-        dosage: treatmentData.dosage,
-        frequency: treatmentData.frequency,
-        duration_days: treatmentData.duration_days,
-        start_date: treatmentData.start_date,
-        instructions: treatmentData.instructions || '',
-        notes: treatmentData.notes || '',
-        alarms: []
-      });
+      // MÉTODO ALTERNATIVO: Obtener tratamiento desde la lista en lugar del endpoint individual
+      console.log('🔍 Buscando tratamiento en la lista...');
       
-      // Cargar alarmas del tratamiento si existen
+      try {
+        // Método 1: Usar getUserTreatments que sabemos que funciona
+        const allTreatments = await apiService.getUserTreatments();
+        console.log('💊 Todos los tratamientos del usuario:', allTreatments);
+        
+        const targetTreatment = allTreatments.find(t => t.id.toString() === id);
+        
+        if (targetTreatment) {
+          console.log('✅ Tratamiento encontrado en lista del usuario:', targetTreatment);
+          setTreatment(targetTreatment);
+          
+          // Inicializar formulario
+          setFormData({
+            medication_id: targetTreatment.medication_id,
+            dosage: targetTreatment.dosage,
+            frequency: targetTreatment.frequency,
+            duration_days: targetTreatment.duration_days,
+            start_date: targetTreatment.start_date,
+            instructions: targetTreatment.instructions || '',
+            notes: targetTreatment.notes || '',
+            alarms: []
+          });
+          
+        } else {
+          throw new Error('Tratamiento no encontrado en tu lista de tratamientos');
+        }
+        
+      } catch (userTreatmentsError) {
+        console.log('❌ Error con getUserTreatments, probando getTreatments directo...');
+        
+        // Método 2: Fallback a getTreatments general
+        try {
+          const allTreatments = await apiService.getTreatments();
+          console.log('💊 Todos los tratamientos del sistema:', allTreatments);
+          
+          const targetTreatment = allTreatments.find(t => t.id.toString() === id);
+          
+          if (targetTreatment) {
+            console.log('✅ Tratamiento encontrado en lista general:', targetTreatment);
+            setTreatment(targetTreatment);
+            
+            // Inicializar formulario
+            setFormData({
+              medication_id: targetTreatment.medication_id,
+              dosage: targetTreatment.dosage,
+              frequency: targetTreatment.frequency,
+              duration_days: targetTreatment.duration_days,
+              start_date: targetTreatment.start_date,
+              instructions: targetTreatment.instructions || '',
+              notes: targetTreatment.notes || '',
+              alarms: []
+            });
+            
+          } else {
+            throw new Error('Tratamiento no encontrado');
+          }
+          
+        } catch (generalError) {
+          console.error('❌ Error obteniendo tratamientos:', generalError);
+          throw new Error('No se pudo obtener la información del tratamiento');
+        }
+      }
+      
+      // Intentar cargar alarmas (opcional)
       try {
         const alarmsData = await apiService.getTreatmentAlarms(parseInt(id));
         console.log('⏰ Alarmas cargadas:', alarmsData);
-        setAlarms(alarmsData || []);
         setFormData(prev => ({ ...prev, alarms: alarmsData || [] }));
       } catch (alarmsError) {
         console.warn('⚠️ No se pudieron cargar las alarmas:', alarmsError);
-        setAlarms([]);
+        // No es crítico, continuar sin alarmas
       }
       
     } catch (err: any) {
@@ -215,21 +266,10 @@ export const EditTreatmentPage: React.FC = () => {
       const updatedTreatment = await apiService.updateTreatment(parseInt(id), updateData);
       console.log('✅ Tratamiento actualizado:', updatedTreatment);
       
-      // Actualizar alarmas si hay cambios
-      if (formData.alarms.length > 0) {
-        try {
-          // Aquí podrías implementar la lógica para actualizar alarmas
-          // Por ahora solo las guardamos localmente
-          console.log('⏰ Alarmas a actualizar:', formData.alarms);
-        } catch (alarmsError) {
-          console.warn('⚠️ Error actualizando alarmas:', alarmsError);
-        }
-      }
-      
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        navigate(`/treatments/${id}`);
+        navigate('/treatments'); // Navegar a la lista en lugar del detalle
       }, 2000);
       
     } catch (error: any) {
@@ -275,14 +315,6 @@ export const EditTreatmentPage: React.FC = () => {
 
       setNewAlarmTime('');
       setNewAlarmDescription('');
-
-      // Limpiar error de alarmas si existe
-      if (errors.alarms) {
-        setErrors((prev: any) => ({
-          ...prev,
-          alarms: undefined
-        }));
-      }
     }
   };
 
@@ -326,7 +358,7 @@ export const EditTreatmentPage: React.FC = () => {
               className="flex items-center space-x-2"
             >
               <ArrowLeft size={16} />
-              <span>Volver</span>
+              <span>Volver a Tratamientos</span>
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Error</h1>
           </div>
@@ -334,9 +366,20 @@ export const EditTreatmentPage: React.FC = () => {
           <Card className="border-red-200 bg-red-50">
             <div className="flex items-center space-x-2 text-red-700">
               <AlertCircle size={20} />
-              <span>{error}</span>
+              <div>
+                <p className="font-medium">Error cargando el tratamiento</p>
+                <p className="text-sm">{error}</p>
+              </div>
             </div>
           </Card>
+          
+          <Button
+            onClick={() => loadInitialData()}
+            className="flex items-center space-x-2"
+          >
+            <RefreshCw size={16} />
+            <span>Reintentar</span>
+          </Button>
         </div>
       </Layout>
     );
@@ -353,10 +396,17 @@ export const EditTreatmentPage: React.FC = () => {
               className="flex items-center space-x-2"
             >
               <ArrowLeft size={16} />
-              <span>Volver</span>
+              <span>Volver a Tratamientos</span>
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Tratamiento no encontrado</h1>
           </div>
+          
+          <Card className="p-6 text-center">
+            <AlertCircle size={48} className="mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600">
+              El tratamiento #{id} no existe o no tienes permisos para verlo.
+            </p>
+          </Card>
         </div>
       </Layout>
     );
@@ -369,14 +419,14 @@ export const EditTreatmentPage: React.FC = () => {
         <div className="flex items-center space-x-4">
           <Button
             variant="outline"
-            onClick={() => navigate(`/treatments/${id}`)}
+            onClick={() => navigate('/treatments')}
             className="flex items-center space-x-2"
           >
             <ArrowLeft size={16} />
             <span>Volver</span>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Editar Tratamiento</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Editar Tratamiento #{id}</h1>
             <p className="text-gray-600">
               Modificar tratamiento para {getPatientName(treatment.patient_id)}
             </p>
@@ -408,7 +458,9 @@ export const EditTreatmentPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-500 mb-1">
                   Paciente
                 </label>
-                <p className="text-gray-900 py-2">{getPatientName(treatment.patient_id)}</p>
+                <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded">
+                  {getPatientName(treatment.patient_id)}
+                </p>
               </div>
 
               <div>
@@ -598,18 +650,18 @@ export const EditTreatmentPage: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {errors.alarms && (
-                <p className="text-sm text-red-600">{errors.alarms}</p>
-              )}
             </div>
           </Card>
 
           {/* Información del sistema */}
           <Card title="Información del Sistema">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <p className="text-sm font-medium text-gray-500">Tratamiento creado</p>
+                <p className="text-sm font-medium text-gray-500">ID del Tratamiento</p>
+                <p className="text-gray-900">#{treatment.id}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Creado</p>
                 <p className="text-gray-900">
                   {new Date(treatment.created_at).toLocaleDateString('es-ES')}
                 </p>
@@ -631,7 +683,7 @@ export const EditTreatmentPage: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(`/treatments/${id}`)}
+              onClick={() => navigate('/treatments')}
             >
               Cancelar
             </Button>
