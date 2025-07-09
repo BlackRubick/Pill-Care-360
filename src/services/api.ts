@@ -70,7 +70,7 @@ class ApiService {
     const config: RequestInit = {
       headers: this.getHeaders(),
       mode: 'cors',
-      credentials: 'include',
+      //credentials: 'include',
       ...options,
     };
 
