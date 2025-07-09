@@ -45,8 +45,11 @@ class ApiService {
   token: string | null;
 
   constructor() {
+    // Asegurar que incluya el puerto correcto
     this.baseURL = import.meta.env.VITE_API_URL || "http://44.209.210.203/api";
     this.token = localStorage.getItem("access_token");
+    
+    console.log("🌐 API Base URL configurada:", this.baseURL);
   }
 
   getHeaders(): HeadersInit {
@@ -54,6 +57,7 @@ class ApiService {
       localStorage.getItem("access_token") || localStorage.getItem("authToken");
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+      "Accept": "application/json",
     };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -65,6 +69,8 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const config: RequestInit = {
       headers: this.getHeaders(),
+      mode: 'cors',
+      credentials: 'include',
       ...options,
     };
 
@@ -82,10 +88,17 @@ class ApiService {
         status: response.status,
         statusText: response.statusText,
         url: response.url,
+        type: response.type,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       if (!response.ok) {
-        // Intentar obtener el mensaje de error detallado
+        // Manejo especial para errores CORS
+        if (response.type === 'opaque' || response.status === 0) {
+          console.error("🚫 Error CORS detectado");
+          throw new Error('Error de CORS: Verifica que el servidor esté corriendo y tenga CORS configurado correctamente.');
+        }
+
         let errorMessage = `HTTP error! status: ${response.status}`;
         let errorData = null;
 
@@ -128,8 +141,18 @@ class ApiService {
       const data = await response.json();
       console.log("✅ API Success:", data);
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("💥 API Request failed:", error);
+      
+      // Manejar diferentes tipos de errores de red
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Error de conexión: No se puede conectar al servidor. Verifica que el servidor esté ejecutándose.');
+      } else if (error.name === 'AbortError') {
+        throw new Error('Timeout: El servidor tardó demasiado en responder.');
+      } else if (error.message.includes('CORS')) {
+        throw new Error('Error CORS: El servidor no permite peticiones desde este origen.');
+      }
+      
       throw error;
     }
   }
@@ -591,7 +614,7 @@ class ApiService {
 
   async getPatients(params: Record<string, any> = {}): Promise<any[]> {
     const queryString = new URLSearchParams(params).toString();
-    return this.request(`/patients/?${queryString}`); // Volver a como estaba antes
+    return this.request(`/patients/${queryString ? "?" + queryString : ""}`);
   }
 
   async getPatient(id: number): Promise<any> {
@@ -637,7 +660,6 @@ class ApiService {
     console.log("Headers:", this.getHeaders());
 
     try {
-      // Volver a usar /patients/ con barra final como funcionaba antes
       const response = await this.request("/patients/", {
         method: "POST",
         body: JSON.stringify(patientData),
@@ -802,7 +824,7 @@ class ApiService {
 
   async getTreatments(params: Record<string, any> = {}): Promise<any[]> {
     const queryString = new URLSearchParams(params).toString();
-    return this.request(`/treatments/?${queryString}`);
+    return this.request(`/treatments/${queryString ? "?" + queryString : ""}`);
   }
 
   async getTreatment(id: number): Promise<any> {
@@ -818,13 +840,14 @@ class ApiService {
   }
 
   async updateTreatment(id: number, treatmentData: any): Promise<any> {
+    console.log(`🔄 Actualizando tratamiento ${id}:`, treatmentData);
     return this.request(`/treatments/${id}`, {
       method: "PUT",
       body: JSON.stringify(treatmentData),
     });
   }
 
-  async deleteTreatment(id: number, id: any): Promise<void> {
+  async deleteTreatment(id: number): Promise<void> {
     return this.request(`/treatments/${id}`, {
       method: "DELETE",
     });
@@ -840,270 +863,245 @@ class ApiService {
   }
 
   // Métodos específicos para tratamientos del usuario actual
-// Actualizar el método getUserTreatments en tu apiService para debug
-
-async getUserTreatments(userId?: number): Promise<any[]> {
-  try {
-    console.log("🔍 getUserTreatments - Iniciando...");
-    
-    const currentUser = this.getStoredUser();
-    console.log("👤 Usuario almacenado:", currentUser);
-    
-    const isAdmin = currentUser?.role === "admin" || currentUser?.role === "administrator";
-    console.log("👑 Es admin:", isAdmin);
-
-    if (isAdmin) {
-      console.log("🔄 Admin detectado - obteniendo todos los tratamientos");
-      return this.getTreatments();
-    } else {
-      console.log("👤 Usuario regular - obteniendo tratamientos filtrados");
-      
-      // Método 1: Usar el endpoint directo que filtra automáticamente por caregiver
-      console.log("🎯 Método 1: Llamada directa al endpoint de tratamientos");
-      try {
-        const directTreatments = await this.getTreatments();
-        console.log("✅ Tratamientos directos:", directTreatments);
-        console.log("📊 Cantidad encontrada:", directTreatments.length);
-        
-        if (directTreatments.length > 0) {
-          console.log("📋 Estructura del primer tratamiento:", directTreatments[0]);
-        }
-        
-        return directTreatments;
-      } catch (directError) {
-        console.error("❌ Error en método directo:", directError);
-      }
-
-      // Método 2: Verificar si hay pacientes asociados al usuario
-      console.log("🎯 Método 2: Verificar pacientes del usuario");
-      try {
-        const caregiverId = userId || currentUser?.id;
-        console.log("🆔 Caregiver ID:", caregiverId);
-        
-        if (!caregiverId) {
-          throw new Error("No se pudo determinar el ID del cuidador");
-        }
-
-        // Obtener pacientes del cuidador
-        const patients = await this.getPatients({ caregiver_id: caregiverId });
-        console.log("👥 Pacientes del cuidador:", patients);
-        console.log("📊 Cantidad de pacientes:", patients.length);
-
-        if (patients.length === 0) {
-          console.warn("⚠️ El usuario no tiene pacientes asignados");
-          return [];
-        }
-
-        // Obtener todos los tratamientos y filtrar por pacientes del usuario
-        const allTreatments = await this.getTreatments();
-        console.log("💊 Todos los tratamientos en el sistema:", allTreatments);
-        console.log("📊 Total tratamientos en sistema:", allTreatments.length);
-
-        const patientIds = patients.map((p: any) => p.id);
-        console.log("🔢 IDs de pacientes del cuidador:", patientIds);
-
-        const userTreatments = allTreatments.filter((t: any) => {
-          const belongsToUser = patientIds.includes(t.patient_id);
-          console.log(`🔍 Tratamiento ${t.id} (paciente ${t.patient_id}): pertenece al usuario = ${belongsToUser}`);
-          return belongsToUser;
-        });
-
-        console.log("✅ Tratamientos filtrados del usuario:", userTreatments);
-        console.log("📊 Cantidad final:", userTreatments.length);
-
-        return userTreatments;
-        
-      } catch (filterError) {
-        console.error("❌ Error en método de filtrado:", filterError);
-      }
-
-      // Método 3: Fallback - intentar obtener tratamientos por paciente específico
-      console.log("🎯 Método 3: Fallback por paciente específico");
-      try {
-        const patients = await this.getPatients();
-        console.log("👥 Pacientes disponibles:", patients);
-        
-        const userTreatments: any[] = [];
-        
-        for (const patient of patients) {
-          try {
-            console.log(`🔍 Obteniendo tratamientos para paciente ${patient.id}`);
-            const patientTreatments = await this.getAllPatientTreatments(patient.id);
-            console.log(`📋 Tratamientos del paciente ${patient.id}:`, patientTreatments);
-            userTreatments.push(...patientTreatments);
-          } catch (patientError) {
-            console.warn(`⚠️ Error obteniendo tratamientos del paciente ${patient.id}:`, patientError);
-          }
-        }
-        
-        console.log("✅ Tratamientos combinados:", userTreatments);
-        return userTreatments;
-        
-      } catch (fallbackError) {
-        console.error("❌ Error en método fallback:", fallbackError);
-      }
-    }
-
-    // Si todos los métodos fallan
-    console.error("💥 Todos los métodos fallaron");
-    return [];
-    
-  } catch (error) {
-    console.error("❌ Error general en getUserTreatments:", error);
-    return [];
-  }
-}
-
-// También agregar este método para debug específico de la relación usuario-pacientes-tratamientos
-async debugUserTreatmentRelations(): Promise<void> {
-  console.log("🔍 === DEBUG DE RELACIONES USUARIO-PACIENTES-TRATAMIENTOS ===");
-  
-  try {
-    // 1. Usuario actual
-    const currentUser = this.getStoredUser();
-    console.log("👤 1. Usuario actual:", {
-      id: currentUser?.id,
-      name: currentUser?.name,
-      email: currentUser?.email,
-      role: currentUser?.role
-    });
-
-    // 2. Verificar autenticación
+  async getUserTreatments(userId?: number): Promise<any[]> {
     try {
-      const apiUser = await this.getCurrentUser();
-      console.log("✅ 2. Usuario verificado por API:", apiUser);
-    } catch (authError) {
-      console.error("❌ 2. Error de autenticación:", authError);
-    }
-
-    // 3. Pacientes del usuario
-    try {
-      const patients = await this.getPatients();
-      console.log("👥 3. Pacientes disponibles:", patients);
+      console.log("🔍 getUserTreatments - Iniciando...");
       
-      // Intentar con filtro de caregiver
-      if (currentUser?.id) {
+      const currentUser = this.getStoredUser();
+      console.log("👤 Usuario almacenado:", currentUser);
+      
+      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "administrator";
+      console.log("👑 Es admin:", isAdmin);
+
+      if (isAdmin) {
+        console.log("🔄 Admin detectado - obteniendo todos los tratamientos");
+        return this.getTreatments();
+      } else {
+        console.log("👤 Usuario regular - obteniendo tratamientos filtrados");
+        
+        // Método 1: Usar el endpoint directo que filtra automáticamente por caregiver
+        console.log("🎯 Método 1: Llamada directa al endpoint de tratamientos");
         try {
-          const filteredPatients = await this.getPatients({ caregiver_id: currentUser.id });
-          console.log("👥 3b. Pacientes filtrados por caregiver:", filteredPatients);
+          const directTreatments = await this.getTreatments();
+          console.log("✅ Tratamientos directos:", directTreatments);
+          console.log("📊 Cantidad encontrada:", directTreatments.length);
+          
+          if (directTreatments.length > 0) {
+            console.log("📋 Estructura del primer tratamiento:", directTreatments[0]);
+          }
+          
+          return directTreatments;
+        } catch (directError) {
+          console.error("❌ Error en método directo:", directError);
+        }
+
+        // Método 2: Verificar si hay pacientes asociados al usuario
+        console.log("🎯 Método 2: Verificar pacientes del usuario");
+        try {
+          const caregiverId = userId || currentUser?.id;
+          console.log("🆔 Caregiver ID:", caregiverId);
+          
+          if (!caregiverId) {
+            throw new Error("No se pudo determinar el ID del cuidador");
+          }
+
+          // Obtener pacientes del cuidador
+          const patients = await this.getPatients({ caregiver_id: caregiverId });
+          console.log("👥 Pacientes del cuidador:", patients);
+          console.log("📊 Cantidad de pacientes:", patients.length);
+
+          if (patients.length === 0) {
+            console.warn("⚠️ El usuario no tiene pacientes asignados");
+            return [];
+          }
+
+          // Obtener todos los tratamientos y filtrar por pacientes del usuario
+          const allTreatments = await this.getTreatments();
+          console.log("💊 Todos los tratamientos en el sistema:", allTreatments);
+          console.log("📊 Total tratamientos en sistema:", allTreatments.length);
+
+          const patientIds = patients.map((p: any) => p.id);
+          console.log("🔢 IDs de pacientes del cuidador:", patientIds);
+
+          const userTreatments = allTreatments.filter((t: any) => {
+            const belongsToUser = patientIds.includes(t.patient_id);
+            console.log(`🔍 Tratamiento ${t.id} (paciente ${t.patient_id}): pertenece al usuario = ${belongsToUser}`);
+            return belongsToUser;
+          });
+
+          console.log("✅ Tratamientos filtrados del usuario:", userTreatments);
+          console.log("📊 Cantidad final:", userTreatments.length);
+
+          return userTreatments;
+          
         } catch (filterError) {
-          console.warn("⚠️ 3b. Error filtrando pacientes:", filterError);
+          console.error("❌ Error en método de filtrado:", filterError);
+        }
+
+        // Método 3: Fallback - intentar obtener tratamientos por paciente específico
+        console.log("🎯 Método 3: Fallback por paciente específico");
+        try {
+          const patients = await this.getPatients();
+          console.log("👥 Pacientes disponibles:", patients);
+          
+          const userTreatments: any[] = [];
+          
+          for (const patient of patients) {
+            try {
+              console.log(`🔍 Obteniendo tratamientos para paciente ${patient.id}`);
+              const patientTreatments = await this.getAllPatientTreatments(patient.id);
+              console.log(`📋 Tratamientos del paciente ${patient.id}:`, patientTreatments);
+              userTreatments.push(...patientTreatments);
+            } catch (patientError) {
+              console.warn(`⚠️ Error obteniendo tratamientos del paciente ${patient.id}:`, patientError);
+            }
+          }
+          
+          console.log("✅ Tratamientos combinados:", userTreatments);
+          return userTreatments;
+          
+        } catch (fallbackError) {
+          console.error("❌ Error en método fallback:", fallbackError);
         }
       }
-    } catch (patientsError) {
-      console.error("❌ 3. Error obteniendo pacientes:", patientsError);
-    }
 
-    // 4. Todos los tratamientos del sistema
-    try {
-      const allTreatments = await this.getTreatments();
-      console.log("💊 4. Todos los tratamientos del sistema:", allTreatments);
+      // Si todos los métodos fallan
+      console.error("💥 Todos los métodos fallaron");
+      return [];
       
-      // Analizar estructura
-      if (allTreatments.length > 0) {
-        console.log("📋 4b. Estructura del primer tratamiento:", {
-          id: allTreatments[0].id,
-          patient_id: allTreatments[0].patient_id,
-          medication_id: allTreatments[0].medication_id,
-          status: allTreatments[0].status,
-          created_by: allTreatments[0].created_by_id || allTreatments[0].created_by,
-          keys: Object.keys(allTreatments[0])
-        });
-      }
-    } catch (treatmentsError) {
-      console.error("❌ 4. Error obteniendo tratamientos:", treatmentsError);
+    } catch (error) {
+      console.error("❌ Error general en getUserTreatments:", error);
+      return [];
     }
-
-    // 5. Verificar endpoints específicos
-    console.log("🔍 5. Probando endpoints específicos...");
-    const endpointsToTest = [
-      { name: "Treatments base", url: "/treatments/" },
-      { name: "Dashboard summary", url: "/treatments/dashboard/summary" },
-      { name: "Expiring treatments", url: "/treatments/expiring" }
-    ];
-
-    for (const endpoint of endpointsToTest) {
-      try {
-        console.log(`🌐 Probando ${endpoint.name}...`);
-        const result = await this.request(endpoint.url);
-        console.log(`✅ ${endpoint.name}:`, result);
-      } catch (endpointError) {
-        console.error(`❌ ${endpoint.name}:`, endpointError);
-      }
-    }
-
-  } catch (error) {
-    console.error("💥 Error general en debug:", error);
   }
-  
-  console.log("🔍 === FIN DEBUG ===");
-}
 
-// Método para crear tratamientos de prueba
-async createTestTreatment(): Promise<void> {
-  console.log("🧪 Creando tratamiento de prueba...");
-  
-  try {
-    // Obtener pacientes disponibles
-    const patients = await this.getPatients();
-    console.log("👥 Pacientes disponibles:", patients);
-    
-    if (patients.length === 0) {
-      console.error("❌ No hay pacientes disponibles para crear tratamiento");
-      return;
-    }
+  // ----- Métodos de Alarmas (NUEVOS Y CORREGIDOS) -----
 
-    // Obtener medicamentos disponibles
-    const medications = await this.getMedications();
-    console.log("💊 Medicamentos disponibles:", medications);
-    
-    if (medications.length === 0) {
-      console.error("❌ No hay medicamentos disponibles para crear tratamiento");
-      return;
-    }
-
-    // Datos de tratamiento de prueba
-    const testTreatment = {
-      patient_id: patients[0].id,
-      medication_id: medications[0].id,
-      dosage: "500mg",
-      frequency: 2,
-      duration: 30,
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      instructions: "Tratamiento de prueba creado desde el frontend"
-    };
-
-    console.log("📋 Datos del tratamiento de prueba:", testTreatment);
-
-    const createdTreatment = await this.createTreatment(testTreatment);
-    console.log("✅ Tratamiento de prueba creado:", createdTreatment);
-
-  } catch (error) {
-    console.error("❌ Error creando tratamiento de prueba:", error);
-  }
-} 
-
-  // Métodos específicos para alarmas de tratamientos
   async getTreatmentAlarms(treatmentId: number): Promise<any[]> {
-    return this.request(`/treatments/${treatmentId}/alarms`);
+    try {
+      console.log(`⏰ Obteniendo alarmas para tratamiento ${treatmentId}...`);
+      const alarms = await this.request(`/treatments/${treatmentId}/alarms`);
+      console.log(`✅ Alarmas obtenidas:`, alarms);
+      return alarms || [];
+    } catch (error: any) {
+      console.warn(`⚠️ Error obteniendo alarmas del tratamiento ${treatmentId}:`, error.message);
+      // Retornar array vacío en lugar de fallar
+      return [];
+    }
   }
 
-  async createTreatmentAlarm(
-    treatmentId: number,
-    alarmData: any
-  ): Promise<any> {
-    console.log(
-      `⏰ Creando alarma para tratamiento ${treatmentId}:`,
-      alarmData
-    );
-    return this.request(`/treatments/${treatmentId}/alarms`, {
-      method: "POST",
-      body: JSON.stringify(alarmData),
-    });
+  async createTreatmentAlarm(treatmentId: number, alarmData: any): Promise<any> {
+    console.log(`⏰ Creando alarma para tratamiento ${treatmentId}:`, alarmData);
+    
+    // Asegurarse de que los datos estén en el formato correcto para la BD
+    const formattedAlarmData = {
+      time: alarmData.time,
+      is_active: alarmData.is_active !== undefined ? alarmData.is_active : true,
+      sound_enabled: alarmData.sound_enabled !== undefined ? alarmData.sound_enabled : true,
+      visual_enabled: alarmData.visual_enabled !== undefined ? alarmData.visual_enabled : true,
+      description: alarmData.description || ''
+    };
+    
+    console.log(`📤 Datos formateados para alarma:`, formattedAlarmData);
+    
+    try {
+      const result = await this.request(`/treatments/${treatmentId}/alarms`, {
+        method: "POST",
+        body: JSON.stringify(formattedAlarmData),
+      });
+      
+      console.log(`✅ Alarma creada exitosamente:`, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Error creando alarma:`, error);
+      throw new Error(`Error creando alarma: ${error.message}`);
+    }
   }
 
-  // Métodos para gestión avanzada de tratamientos
+  async deleteTreatmentAlarm(treatmentId: number, alarmId: number): Promise<void> {
+    console.log(`🗑️ Eliminando alarma ${alarmId} del tratamiento ${treatmentId}...`);
+    
+    try {
+      await this.request(`/treatments/${treatmentId}/alarms/${alarmId}`, {
+        method: "DELETE",
+      });
+      
+      console.log(`✅ Alarma ${alarmId} eliminada exitosamente`);
+    } catch (error: any) {
+      console.error(`❌ Error eliminando alarma:`, error);
+      throw new Error(`Error eliminando alarma: ${error.message}`);
+    }
+  }
+
+  async updateTreatmentAlarm(treatmentId: number, alarmId: number, alarmData: any): Promise<any> {
+    console.log(`✏️ Actualizando alarma ${alarmId} del tratamiento ${treatmentId}:`, alarmData);
+    
+    const formattedAlarmData = {
+      time: alarmData.time,
+      is_active: alarmData.is_active,
+      sound_enabled: alarmData.sound_enabled,
+      visual_enabled: alarmData.visual_enabled,
+      description: alarmData.description || ''
+    };
+    
+    try {
+      const result = await this.request(`/treatments/${treatmentId}/alarms/${alarmId}`, {
+        method: "PUT",
+        body: JSON.stringify(formattedAlarmData),
+      });
+      
+      console.log(`✅ Alarma ${alarmId} actualizada exitosamente:`, result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Error actualizando alarma:`, error);
+      throw new Error(`Error actualizando alarma: ${error.message}`);
+    }
+  }
+
+  async syncTreatmentAlarms(treatmentId: number, newAlarms: any[]): Promise<any[]> {
+    console.log(`🔄 Sincronizando alarmas del tratamiento ${treatmentId}...`);
+    console.log(`📋 Nuevas alarmas:`, newAlarms);
+    
+    try {
+      // Paso 1: Obtener alarmas actuales
+      const currentAlarms = await this.getTreatmentAlarms(treatmentId);
+      console.log(`📋 Alarmas actuales:`, currentAlarms);
+      
+      // Paso 2: Eliminar alarmas actuales
+      for (const alarm of currentAlarms) {
+        try {
+          await this.deleteTreatmentAlarm(treatmentId, alarm.id);
+          console.log(`🗑️ Alarma ${alarm.id} eliminada`);
+        } catch (deleteError) {
+          console.warn(`⚠️ No se pudo eliminar alarma ${alarm.id}:`, deleteError);
+          // Continuar con las demás
+        }
+      }
+      
+      // Paso 3: Crear las nuevas alarmas
+      const createdAlarms = [];
+      for (const [index, alarm] of newAlarms.entries()) {
+        try {
+          const createdAlarm = await this.createTreatmentAlarm(treatmentId, alarm);
+          createdAlarms.push(createdAlarm);
+          console.log(`✅ Alarma ${index + 1} creada exitosamente`);
+        } catch (createError) {
+          console.error(`❌ Error creando alarma ${index + 1}:`, createError);
+          throw createError;
+        }
+      }
+      
+      console.log(`✅ Sincronización de alarmas completada. ${createdAlarms.length} alarmas creadas.`);
+      return createdAlarms;
+      
+    } catch (error: any) {
+      console.error(`❌ Error sincronizando alarmas:`, error);
+      throw new Error(`Error sincronizando alarmas: ${error.message}`);
+    }
+  }
+
+  // ----- Métodos de gestión avanzada de tratamientos -----
+
   async activateTreatment(treatmentId: number): Promise<any> {
     return this.request(`/treatments/${treatmentId}/activate`, {
       method: "POST",
@@ -1220,10 +1218,10 @@ async createTestTreatment(): Promise<void> {
     const endpointsToTest = [
       { method: "GET", url: "/patients/" },
       { method: "GET", url: "/patients" },
-      { method: "GET", url: "/patients/1/" },
-      { method: "GET", url: "/patients/1" },
-      { method: "GET", url: "/patient/1/" },
-      { method: "GET", url: "/patient/1" },
+      { method: "GET", url: "/treatments/" },
+      { method: "GET", url: "/treatments" },
+      { method: "GET", url: "/medications/" },
+      { method: "GET", url: "/medications" },
       { method: "GET", url: "/health" },
       { method: "GET", url: "/docs" },
       { method: "GET", url: "/openapi.json" },
@@ -1250,6 +1248,61 @@ async createTestTreatment(): Promise<void> {
     console.log(
       `📄 O revisa: ${this.baseURL.replace("/api", "/openapi.json")}`
     );
+  }
+
+  // Método de diagnóstico mejorado
+  async runCompleteDiagnosis(): Promise<void> {
+    console.log("🔍 === DIAGNÓSTICO COMPLETO DE CONEXIÓN ===");
+    
+    // 1. Información básica
+    console.log("\n📱 Información del cliente:");
+    console.log("Origin:", window.location.origin);
+    console.log("URL actual configurada:", this.baseURL);
+    
+    // 2. Probar endpoints básicos
+    console.log("\n🌐 Probando endpoints básicos:");
+    const endpoints = ["/health", "/", "/docs"];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const result = await this.request(endpoint);
+        console.log(`✅ ${endpoint}:`, result);
+      } catch (error: any) {
+        console.error(`❌ ${endpoint}:`, error.message);
+      }
+    }
+    
+    // 3. Probar endpoints de API
+    console.log("\n💊 Probando endpoints de API:");
+    const apiEndpoints = ["/patients", "/medications", "/treatments"];
+    
+    for (const endpoint of apiEndpoints) {
+      try {
+        const result = await this.request(endpoint);
+        console.log(`✅ ${endpoint}:`, Array.isArray(result) ? `${result.length} elementos` : result);
+      } catch (error: any) {
+        console.error(`❌ ${endpoint}:`, error.message);
+      }
+    }
+    
+    // 4. Probar alarmas si hay tratamientos
+    console.log("\n⏰ Probando funcionalidad de alarmas:");
+    try {
+      const treatments = await this.getTreatments();
+      if (treatments.length > 0) {
+        const firstTreatment = treatments[0];
+        console.log(`🔍 Probando alarmas del tratamiento ${firstTreatment.id}...`);
+        
+        const alarms = await this.getTreatmentAlarms(firstTreatment.id);
+        console.log(`✅ Alarmas encontradas:`, alarms);
+      } else {
+        console.log("⚠️ No hay tratamientos para probar alarmas");
+      }
+    } catch (error: any) {
+      console.error("❌ Error probando alarmas:", error.message);
+    }
+    
+    console.log("\n🏁 === FIN DIAGNÓSTICO ===");
   }
 }
 
