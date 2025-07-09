@@ -824,7 +824,7 @@ class ApiService {
     });
   }
 
-  async deleteTreatment(id: number): Promise<void> {
+  async deleteTreatment(id: number, id: any): Promise<void> {
     return this.request(`/treatments/${id}`, {
       method: "DELETE",
     });

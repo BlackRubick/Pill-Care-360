@@ -107,21 +107,20 @@ export const EditTreatmentPage: React.FC = () => {
       setPatients(patientsData);
       setMedications(medicationsData);
       
-      // MÉTODO ALTERNATIVO: Obtener tratamiento desde la lista en lugar del endpoint individual
+      // Obtener tratamiento desde la lista
       console.log('🔍 Buscando tratamiento en la lista...');
       
       try {
-        // Método 1: Usar getUserTreatments que sabemos que funciona
         const allTreatments = await apiService.getUserTreatments();
         console.log('💊 Todos los tratamientos del usuario:', allTreatments);
         
         const targetTreatment = allTreatments.find(t => t.id.toString() === id);
         
         if (targetTreatment) {
-          console.log('✅ Tratamiento encontrado en lista del usuario:', targetTreatment);
+          console.log('✅ Tratamiento encontrado:', targetTreatment);
           setTreatment(targetTreatment);
           
-          // Inicializar formulario
+          // Inicializar formulario básico
           setFormData({
             medication_id: targetTreatment.medication_id,
             dosage: targetTreatment.dosage,
@@ -130,8 +129,39 @@ export const EditTreatmentPage: React.FC = () => {
             start_date: targetTreatment.start_date,
             instructions: targetTreatment.instructions || '',
             notes: targetTreatment.notes || '',
-            alarms: []
+            alarms: [] // Se cargará por separado
           });
+          
+          // Cargar alarmas por separado DESPUÉS de confirmar que el tratamiento existe
+          console.log('⏰ Cargando alarmas del tratamiento...');
+          try {
+            const alarmsData = await apiService.getTreatmentAlarms(parseInt(id));
+            console.log('✅ Alarmas cargadas desde BD:', alarmsData);
+            
+            // Convertir formato de BD a formato del frontend
+            const formattedAlarms = alarmsData.map((alarm: any) => ({
+              time: alarm.time,
+              description: alarm.description || '',
+              isActive: alarm.is_active !== undefined ? alarm.is_active : true,
+              soundEnabled: alarm.sound_enabled !== undefined ? alarm.sound_enabled : true,
+              visualEnabled: alarm.visual_enabled !== undefined ? alarm.visual_enabled : true
+            }));
+            
+            console.log('📝 Alarmas formateadas:', formattedAlarms);
+            
+            setFormData(prev => ({ 
+              ...prev, 
+              alarms: formattedAlarms 
+            }));
+            
+          } catch (alarmsError) {
+            console.warn('⚠️ No se pudieron cargar las alarmas:', alarmsError);
+            // No es crítico, continuar sin alarmas
+            setFormData(prev => ({ 
+              ...prev, 
+              alarms: [] 
+            }));
+          }
           
         } else {
           throw new Error('Tratamiento no encontrado en tu lista de tratamientos');
@@ -140,7 +170,7 @@ export const EditTreatmentPage: React.FC = () => {
       } catch (userTreatmentsError) {
         console.log('❌ Error con getUserTreatments, probando getTreatments directo...');
         
-        // Método 2: Fallback a getTreatments general
+        // Fallback method
         try {
           const allTreatments = await apiService.getTreatments();
           console.log('💊 Todos los tratamientos del sistema:', allTreatments);
@@ -163,6 +193,26 @@ export const EditTreatmentPage: React.FC = () => {
               alarms: []
             });
             
+            // Cargar alarmas
+            try {
+              const alarmsData = await apiService.getTreatmentAlarms(parseInt(id));
+              const formattedAlarms = alarmsData.map((alarm: any) => ({
+                time: alarm.time,
+                description: alarm.description || '',
+                isActive: alarm.is_active !== undefined ? alarm.is_active : true,
+                soundEnabled: alarm.sound_enabled !== undefined ? alarm.sound_enabled : true,
+                visualEnabled: alarm.visual_enabled !== undefined ? alarm.visual_enabled : true
+              }));
+              
+              setFormData(prev => ({ 
+                ...prev, 
+                alarms: formattedAlarms 
+              }));
+              
+            } catch (alarmsError) {
+              console.warn('⚠️ No se pudieron cargar las alarmas:', alarmsError);
+            }
+            
           } else {
             throw new Error('Tratamiento no encontrado');
           }
@@ -171,16 +221,6 @@ export const EditTreatmentPage: React.FC = () => {
           console.error('❌ Error obteniendo tratamientos:', generalError);
           throw new Error('No se pudo obtener la información del tratamiento');
         }
-      }
-      
-      // Intentar cargar alarmas (opcional)
-      try {
-        const alarmsData = await apiService.getTreatmentAlarms(parseInt(id));
-        console.log('⏰ Alarmas cargadas:', alarmsData);
-        setFormData(prev => ({ ...prev, alarms: alarmsData || [] }));
-      } catch (alarmsError) {
-        console.warn('⚠️ No se pudieron cargar las alarmas:', alarmsError);
-        // No es crítico, continuar sin alarmas
       }
       
     } catch (err: any) {
@@ -241,14 +281,14 @@ export const EditTreatmentPage: React.FC = () => {
     setError(null);
 
     try {
-      console.log('🔄 Actualizando tratamiento:', formData);
+      console.log('🔄 Actualizando tratamiento y alarmas:', formData);
       
       // Calcular fecha de fin basada en duración
       const startDate = new Date(formData.start_date);
       const endDate = new Date(startDate);
       endDate.setDate(startDate.getDate() + formData.duration_days);
       
-      // Preparar datos para la API
+      // PASO 1: Actualizar información básica del tratamiento
       const updateData = {
         medication_id: formData.medication_id,
         dosage: formData.dosage,
@@ -260,16 +300,85 @@ export const EditTreatmentPage: React.FC = () => {
         notes: formData.notes
       };
 
-      console.log('📤 Datos a enviar:', updateData);
+      console.log('📤 Datos del tratamiento a enviar:', updateData);
       
-      // Actualizar tratamiento
       const updatedTreatment = await apiService.updateTreatment(parseInt(id), updateData);
       console.log('✅ Tratamiento actualizado:', updatedTreatment);
+      
+      // PASO 2: Manejar alarmas por separado
+      if (formData.alarms.length > 0) {
+        console.log('⏰ Procesando alarmas...');
+        
+        try {
+          // Obtener alarmas actuales para poder eliminarlas
+          console.log('🔍 Obteniendo alarmas actuales...');
+          const currentAlarms = await apiService.getTreatmentAlarms(parseInt(id));
+          console.log('📋 Alarmas actuales:', currentAlarms);
+          
+          // Eliminar alarmas existentes
+          for (const alarm of currentAlarms) {
+            try {
+              console.log(`🗑️ Eliminando alarma ${alarm.id}...`);
+              await apiService.deleteTreatment(parseInt(id), alarm.id);
+              console.log(`✅ Alarma ${alarm.id} eliminada`);
+            } catch (deleteError) {
+              console.warn(`⚠️ No se pudo eliminar alarma ${alarm.id}:`, deleteError);
+              // Continuar con las demás
+            }
+          }
+          
+          // Crear nuevas alarmas
+          const alarmPromises = formData.alarms.map(async (alarm, index) => {
+            const alarmData = {
+              time: alarm.time,
+              is_active: alarm.isActive,
+              sound_enabled: alarm.soundEnabled,
+              visual_enabled: alarm.visualEnabled,
+              description: alarm.description
+            };
+            
+            console.log(`⏰ Creando alarma ${index + 1}:`, alarmData);
+            
+            try {
+              const createdAlarm = await apiService.createTreatmentAlarm(parseInt(id), alarmData);
+              console.log(`✅ Alarma ${index + 1} creada:`, createdAlarm);
+              return createdAlarm;
+            } catch (alarmError) {
+              console.error(`❌ Error creando alarma ${index + 1}:`, alarmError);
+              throw alarmError;
+            }
+          });
+          
+          const createdAlarms = await Promise.all(alarmPromises);
+          console.log('✅ Todas las alarmas creadas:', createdAlarms);
+          
+        } catch (alarmsError) {
+          console.error('❌ Error manejando alarmas:', alarmsError);
+          // No fallar todo por las alarmas, pero mostrar advertencia
+          setError(`Tratamiento actualizado, pero hubo problemas con las alarmas: ${alarmsError.message}`);
+        }
+      } else {
+        // Si no hay alarmas nuevas, eliminar las existentes
+        console.log('🧹 No hay alarmas nuevas, eliminando existentes...');
+        try {
+          const currentAlarms = await apiService.getTreatmentAlarms(parseInt(id));
+          for (const alarm of currentAlarms) {
+            try {
+              await apiService.deleteTreatment(parseInt(id), alarm.id);
+              console.log(`✅ Alarma ${alarm.id} eliminada`);
+            } catch (deleteError) {
+              console.warn(`⚠️ No se pudo eliminar alarma ${alarm.id}:`, deleteError);
+            }
+          }
+        } catch (cleanupError) {
+          console.warn('⚠️ Error limpiando alarmas:', cleanupError);
+        }
+      }
       
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        navigate('/treatments'); // Navegar a la lista en lugar del detalle
+        navigate('/treatments');
       }, 2000);
       
     } catch (error: any) {
@@ -437,7 +546,7 @@ export const EditTreatmentPage: React.FC = () => {
         {showSuccess && (
           <Alert
             type="success"
-            message="Tratamiento actualizado correctamente"
+            message="Tratamiento y alarmas actualizados correctamente"
           />
         )}
 
@@ -562,7 +671,7 @@ export const EditTreatmentPage: React.FC = () => {
           <Card title="Configuración de Alarmas">
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Configura los horarios en que el paciente debe tomar el medicamento
+                Configura los horarios en que el paciente debe tomar el medicamento. Las alarmas se guardarán en la base de datos.
               </p>
 
               {/* Agregar nueva alarma */}
@@ -583,6 +692,7 @@ export const EditTreatmentPage: React.FC = () => {
                   <Button
                     type="button"
                     onClick={addAlarm}
+                    disabled={!newAlarmTime || !newAlarmDescription.trim()}
                     className="flex items-center space-x-2"
                   >
                     <Plus size={16} />
@@ -594,7 +704,7 @@ export const EditTreatmentPage: React.FC = () => {
               {/* Lista de alarmas */}
               <div className="space-y-3">
                 {formData.alarms.map((alarm, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
                     <div className="flex items-center space-x-4">
                       <div className="text-lg font-medium text-blue-600">
                         {alarm.time}
@@ -636,6 +746,7 @@ export const EditTreatmentPage: React.FC = () => {
                       type="button"
                       onClick={() => removeAlarm(index)}
                       className="text-red-600 hover:text-red-800 p-1"
+                      title="Eliminar alarma"
                     >
                       <X size={16} />
                     </button>
@@ -646,7 +757,7 @@ export const EditTreatmentPage: React.FC = () => {
                   <div className="text-center py-8 text-gray-500">
                     <Clock size={48} className="mx-auto mb-4 text-gray-300" />
                     <p>No hay alarmas configuradas</p>
-                    <p className="text-sm">Las alarmas son opcionales</p>
+                    <p className="text-sm">Las alarmas son opcionales pero recomendadas</p>
                   </div>
                 )}
               </div>
@@ -684,6 +795,7 @@ export const EditTreatmentPage: React.FC = () => {
               type="button"
               variant="outline"
               onClick={() => navigate('/treatments')}
+              disabled={isLoading}
             >
               Cancelar
             </Button>
@@ -693,7 +805,9 @@ export const EditTreatmentPage: React.FC = () => {
               className="flex items-center space-x-2"
             >
               <Save size={16} />
-              <span>Guardar Cambios</span>
+              <span>
+                {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+              </span>
             </Button>
           </div>
         </form>
