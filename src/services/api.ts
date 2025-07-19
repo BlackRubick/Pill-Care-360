@@ -1220,7 +1220,7 @@ class ApiService {
       { method: "GET", url: "/patients" },
       { method: "GET", url: "/treatments/" },
       { method: "GET", url: "/treatments" },
-      { method: "GET", url: "/medications/" },
+      { method: "GET", url: "/medications/" },  
       { method: "GET", url: "/medications" },
       { method: "GET", url: "/health" },
       { method: "GET", url: "/docs" },
