@@ -1556,6 +1556,260 @@ async getReportsPageData(period: string = '30d'): Promise<any> {
 }
 
 
+async getAlerts(
+  severity?: string,
+  alertType?: string,
+  showRead: boolean = true,
+  limit: number = 50
+): Promise<any[]> {
+  try {
+    console.log(`🚨 Obteniendo alertas...`);
+    
+    const params = new URLSearchParams();
+    if (severity) params.append('severity', severity);
+    if (alertType) params.append('alert_type', alertType);
+    params.append('show_read', showRead.toString());
+    params.append('limit', limit.toString());
+    
+    const alerts = await this.request(`/alerts/?${params.toString()}`);
+    console.log('✅ Alertas obtenidas:', alerts);
+    return alerts;
+  } catch (error: any) {
+    console.error('❌ Error obteniendo alertas:', error);
+    
+    // Fallback con datos simulados si la API falla
+    return this.generateFallbackAlerts();
+  }
+}
+
+/**
+ * Obtener estadísticas de alertas
+ */
+async getAlertsStats(): Promise<any> {
+  try {
+    console.log('📊 Obteniendo estadísticas de alertas...');
+    const stats = await this.request('/alerts/stats');
+    console.log('✅ Estadísticas de alertas obtenidas:', stats);
+    return stats;
+  } catch (error: any) {
+    console.error('❌ Error obteniendo estadísticas de alertas:', error);
+    
+    // Fallback con estadísticas por defecto
+    return {
+      unread_count: 0,
+      high_priority_count: 0,
+      medium_priority_count: 0,
+      missed_dose_count: 0,
+      total_count: 0
+    };
+  }
+}
+
+/**
+ * Marcar alerta como leída
+ */
+async markAlertAsRead(alertId: string): Promise<any> {
+  try {
+    console.log(`📖 Marcando alerta ${alertId} como leída...`);
+    const result = await this.request(`/alerts/${alertId}/read`, {
+      method: 'PATCH'
+    });
+    console.log('✅ Alerta marcada como leída:', result);
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Error marcando alerta ${alertId} como leída:`, error);
+    throw new Error(`Error marcando alerta como leída: ${error.message}`);
+  }
+}
+
+/**
+ * Marcar alerta como no leída
+ */
+async markAlertAsUnread(alertId: string): Promise<any> {
+  try {
+    console.log(`📩 Marcando alerta ${alertId} como no leída...`);
+    const result = await this.request(`/alerts/${alertId}/unread`, {
+      method: 'PATCH'
+    });
+    console.log('✅ Alerta marcada como no leída:', result);
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Error marcando alerta ${alertId} como no leída:`, error);
+    throw new Error(`Error marcando alerta como no leída: ${error.message}`);
+  }
+}
+
+/**
+ * Eliminar alerta
+ */
+async deleteAlert(alertId: string): Promise<any> {
+  try {
+    console.log(`🗑️ Eliminando alerta ${alertId}...`);
+    const result = await this.request(`/alerts/${alertId}`, {
+      method: 'DELETE'
+    });
+    console.log('✅ Alerta eliminada:', result);
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Error eliminando alerta ${alertId}:`, error);
+    throw new Error(`Error eliminando alerta: ${error.message}`);
+  }
+}
+
+/**
+ * Marcar todas las alertas como leídas
+ */
+async markAllAlertsAsRead(): Promise<any> {
+  try {
+    console.log('📚 Marcando todas las alertas como leídas...');
+    const result = await this.request('/alerts/mark-all-read', {
+      method: 'PATCH'
+    });
+    console.log('✅ Todas las alertas marcadas como leídas:', result);
+    return result;
+  } catch (error: any) {
+    console.error('❌ Error marcando todas las alertas como leídas:', error);
+    throw new Error(`Error marcando todas las alertas como leídas: ${error.message}`);
+  }
+}
+
+/**
+ * Obtener tipos de alertas disponibles
+ */
+async getAlertTypes(): Promise<any[]> {
+  try {
+    console.log('🏷️ Obteniendo tipos de alertas...');
+    const types = await this.request('/alerts/types');
+    console.log('✅ Tipos de alertas obtenidos:', types);
+    return types;
+  } catch (error: any) {
+    console.error('❌ Error obteniendo tipos de alertas:', error);
+    
+    // Fallback con tipos por defecto
+    return [
+      { value: 'missed_dose', label: 'Dosis Perdida' },
+      { value: 'late_dose', label: 'Dosis Tardía' },
+      { value: 'low_compliance', label: 'Bajo Cumplimiento' },
+      { value: 'treatment_end', label: 'Fin de Tratamiento' }
+    ];
+  }
+}
+
+/**
+ * Obtener severidades de alertas disponibles
+ */
+async getAlertSeverities(): Promise<any[]> {
+  try {
+    console.log('⚠️ Obteniendo severidades de alertas...');
+    const severities = await this.request('/alerts/severities');
+    console.log('✅ Severidades de alertas obtenidas:', severities);
+    return severities;
+  } catch (error: any) {
+    console.error('❌ Error obteniendo severidades de alertas:', error);
+    
+    // Fallback con severidades por defecto
+    return [
+      { value: 'high', label: 'Alta' },
+      { value: 'medium', label: 'Media' },
+      { value: 'low', label: 'Baja' }
+    ];
+  }
+}
+
+/**
+ * Obtener todos los datos necesarios para la página de alertas
+ */
+async getAlertsPageData(
+  severity?: string,
+  alertType?: string,
+  showRead: boolean = true
+): Promise<any> {
+  try {
+    console.log('🚨 Cargando datos completos de alertas...');
+    
+    // Hacer llamadas en paralelo
+    const [alerts, stats, types, severities] = await Promise.allSettled([
+      this.getAlerts(severity, alertType, showRead),
+      this.getAlertsStats(),
+      this.getAlertTypes(),
+      this.getAlertSeverities()
+    ]);
+
+    // Extraer valores o usar fallbacks
+    const extractValue = (result: any, fallback: any) => 
+      result.status === 'fulfilled' ? result.value : fallback;
+
+    const alertsData = {
+      alerts: extractValue(alerts, []),
+      stats: extractValue(stats, {
+        unread_count: 0,
+        high_priority_count: 0,
+        medium_priority_count: 0,
+        missed_dose_count: 0,
+        total_count: 0
+      }),
+      types: extractValue(types, []),
+      severities: extractValue(severities, [])
+    };
+
+    console.log('✅ Datos completos de alertas cargados:', alertsData);
+    return alertsData;
+
+  } catch (error: any) {
+    console.error('❌ Error cargando datos de alertas:', error);
+    throw new Error(`Error cargando datos de alertas: ${error.message}`);
+  }
+}
+
+/**
+ * Generar alertas de fallback cuando la API no está disponible
+ */
+private generateFallbackAlerts(): any[] {
+  console.log('⚠️ Generando alertas de fallback...');
+  
+  const currentUser = this.getStoredUser();
+  const baseAlerts = [
+    {
+      id: '1',
+      patient_id: 1,
+      patient_name: 'María García',
+      treatment_id: 1,
+      medication_name: 'Metformina 500mg',
+      type: 'missed_dose',
+      message: 'María García no tomó su dosis de Metformina 500mg programada',
+      severity: 'high',
+      is_read: false,
+      created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min ago
+    },
+    {
+      id: '2',
+      patient_id: 2,
+      patient_name: 'Juan Pérez',
+      treatment_id: 2,
+      medication_name: 'Ibuprofeno 400mg',
+      type: 'late_dose',
+      message: 'Juan Pérez tomó su dosis de Ibuprofeno 400mg con retraso',
+      severity: 'medium',
+      is_read: false,
+      created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString() // 45 min ago
+    },
+    {
+      id: '3',
+      patient_id: 3,
+      patient_name: 'Ana López',
+      treatment_id: 3,
+      medication_name: 'Enalapril 10mg',
+      type: 'low_compliance',
+      message: 'Ana López tiene un cumplimiento del 65% en los últimos 7 días',
+      severity: 'high',
+      is_read: true,
+      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
+    }
+  ];
+
+  return baseAlerts;
+}
+
 
 }
 
