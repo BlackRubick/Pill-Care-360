@@ -518,16 +518,6 @@ export const AlarmsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Información del usuario actual */}
-        {currentUser && (
-          <Card className="bg-green-50 border-green-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                <User size={20} className="text-white" />
-              </div>
-            </div>
-          </Card>
-        )}
 
         {/* Estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
