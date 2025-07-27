@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '../../components/layout/Layout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -18,118 +18,229 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Filter
+  Filter,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Cell, Area, AreaChart } from 'recharts';
+import apiService from '../../services/api';
 
-// Datos simulados para reportes
-const complianceData = [
-  { date: '2024-11-01', compliance: 78, patients: 20, doses: 145 },
-  { date: '2024-11-02', compliance: 82, patients: 21, doses: 158 },
-  { date: '2024-11-03', compliance: 85, patients: 22, doses: 167 },
-  { date: '2024-11-04', compliance: 79, patients: 22, doses: 162 },
-  { date: '2024-11-05', compliance: 88, patients: 23, doses: 178 },
-  { date: '2024-11-06', compliance: 91, patients: 24, doses: 189 },
-  { date: '2024-11-07', compliance: 87, patients: 24, doses: 185 },
-  { date: '2024-11-08', compliance: 89, patients: 24, doses: 192 },
-  { date: '2024-11-09', compliance: 93, patients: 25, doses: 201 },
-  { date: '2024-11-10', compliance: 86, patients: 25, doses: 196 },
-  { date: '2024-11-11', compliance: 90, patients: 25, doses: 203 },
-  { date: '2024-11-12', compliance: 94, patients: 26, doses: 218 },
-  { date: '2024-11-13', compliance: 88, patients: 26, doses: 210 },
-  { date: '2024-11-14', compliance: 92, patients: 26, doses: 224 },
-  { date: '2024-11-15', compliance: 89, patients: 27, doses: 219 }
-];
-
-const medicationDistribution = [
-  { name: 'Cardiovasculares', value: 35, color: '#3B82F6' },
-  { name: 'Diabetes', value: 28, color: '#10B981' },
-  { name: 'Analgésicos', value: 18, color: '#F59E0B' },
-  { name: 'Antibióticos', value: 12, color: '#EF4444' },
-  { name: 'Otros', value: 7, color: '#8B5CF6' }
-];
-
-const hourlyPatterns = [
-  { hour: '06:00', doses: 12, compliance: 85 },
-  { hour: '08:00', doses: 45, compliance: 92 },
-  { hour: '12:00', doses: 38, compliance: 88 },
-  { hour: '18:00', doses: 42, compliance: 90 },
-  { hour: '20:00', doses: 35, compliance: 87 },
-  { hour: '22:00', doses: 28, compliance: 82 }
-];
-
-const patientComplianceRanges = [
-  { range: '90-100%', patients: 15, color: '#10B981' },
-  { range: '80-89%', patients: 8, color: '#F59E0B' },
-  { range: '70-79%', patients: 3, color: '#EF4444' },
-  { range: '60-69%', patients: 1, color: '#DC2626' },
-  { range: '<60%', patients: 0, color: '#7F1D1D' }
-];
-
-const treatmentTypes = [
-  { type: 'Crónicos', count: 18, percentage: 67 },
-  { type: 'Agudos', count: 6, percentage: 22 },
-  { type: 'Preventivos', count: 3, percentage: 11 }
-];
-
-const mockUser = {
-  name: 'Dr. Juan Martínez',
-  email: 'doctor@pillcare360.com'
-};
+interface ReportsData {
+  overallStats: {
+    totalPatients: number;
+    totalTreatments: number;
+    averageCompliance: number;
+    totalDoses: number;
+    missedDoses: number;
+    alerts: number;
+    improvementRate: number;
+  };
+  complianceData: Array<{
+    date: string;
+    compliance: number;
+    patients: number;
+    doses: number;
+  }>;
+  medicationDistribution: Array<{
+    name: string;
+    value: number;
+    color: string;
+    count: number;
+  }>;
+  hourlyPatterns: Array<{
+    hour: string;
+    doses: number;
+    compliance: number;
+  }>;
+  patientComplianceRanges: Array<{
+    range: string;
+    patients: number;
+    color: string;
+  }>;
+  treatmentTypes: Array<{
+    type: string;
+    count: number;
+    percentage: number;
+  }>;
+}
 
 export const ReportsPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [selectedReport, setSelectedReport] = useState('compliance');
+  const [reportsData, setReportsData] = useState<ReportsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Obtener usuario actual
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Obtener usuario del localStorage
+    const user = apiService.getStoredUser();
+    setCurrentUser(user);
+  }, []);
+
+  // Cargar datos de reportes
+  const loadReportsData = async (period: string = selectedPeriod) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`📊 Cargando datos de reportes para período: ${period}`);
+      
+      const data = await apiService.getReportsPageData(period);
+      setReportsData(data);
+      
+      console.log('✅ Datos de reportes cargados exitosamente');
+    } catch (err: any) {
+      console.error('❌ Error cargando datos de reportes:', err);
+      setError(`Error cargando datos: ${err.message}`);
+      
+      // Mantener datos anteriores si existen
+      if (!reportsData) {
+        // Datos de fallback solo si no hay datos previos
+        setReportsData({
+          overallStats: {
+            totalPatients: 0,
+            totalTreatments: 0,
+            averageCompliance: 0,
+            totalDoses: 0,
+            missedDoses: 0,
+            alerts: 0,
+            improvementRate: 0
+          },
+          complianceData: [],
+          medicationDistribution: [],
+          hourlyPatterns: [],
+          patientComplianceRanges: [],
+          treatmentTypes: []
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar datos al montar el componente y cuando cambie el período
+  useEffect(() => {
+    loadReportsData(selectedPeriod);
+  }, [selectedPeriod]);
 
   const handleLogout = () => {
-    console.log('Logging out...');
+    apiService.logout();
   };
 
-  const generateReport = (type: string) => {
-    console.log(`Generando reporte: ${type}`);
-    // Aquí iría la lógica para generar y descargar el reporte
+  const generateReport = async (type: string) => {
+    try {
+      console.log(`📄 Generando reporte: ${type}`);
+      
+      const result = await apiService.generateReport(type, 'pdf', selectedPeriod);
+      
+      // Mostrar mensaje de éxito
+      alert(`Reporte de ${type} generado exitosamente. Se iniciará la descarga.`);
+      
+      // Aquí podrías implementar la descarga real del archivo
+      console.log('🔽 URL de descarga:', result.download_url);
+      
+    } catch (err: any) {
+      console.error('❌ Error generando reporte:', err);
+      alert(`Error generando reporte: ${err.message}`);
+    }
   };
 
-  const exportData = (format: string) => {
-    console.log(`Exportando datos en formato: ${format}`);
-    // Aquí iría la lógica para exportar datos
+  const exportData = async (format: string) => {
+    try {
+      console.log(`📤 Exportando datos en formato: ${format}`);
+      
+      const result = await apiService.exportData(format, 'all');
+      
+      // Mostrar mensaje de éxito
+      alert(`Datos exportados en formato ${format} exitosamente.`);
+      
+      // Aquí podrías implementar la descarga real del archivo
+      console.log('🔽 URL de descarga:', result.download_url);
+      
+    } catch (err: any) {
+      console.error('❌ Error exportando datos:', err);
+      alert(`Error exportando datos: ${err.message}`);
+    }
   };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
   };
 
-  const overallStats = {
-    totalPatients: 27,
-    totalTreatments: 45,
-    averageCompliance: 89,
-    totalDoses: 2847,
-    missedDoses: 312,
-    alerts: 23,
-    improvementRate: 5.2
-  };
+  // Mostrar loading
+  if (loading && !reportsData) {
+    return (
+      <Layout user={currentUser} onLogout={handleLogout}>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Cargando datos de reportes...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!reportsData) {
+    return (
+      <Layout user={currentUser} onLogout={handleLogout}>
+        <div className="text-center py-12">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error cargando reportes</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => loadReportsData()} className="flex items-center space-x-2">
+            <RefreshCw size={16} />
+            <span>Reintentar</span>
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  const { overallStats } = reportsData;
 
   return (
-    <Layout user={mockUser} onLogout={handleLogout}>
+    <Layout user={currentUser} onLogout={handleLogout}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Reportes y Análisis</h1>
             <p className="text-gray-600">Análisis detallado del cumplimiento y patrones de medicación</p>
+            {error && (
+              <div className="mt-2 flex items-center space-x-2 text-amber-600">
+                <AlertTriangle size={16} />
+                <span className="text-sm">Algunos datos pueden no estar actualizados</span>
+              </div>
+            )}
           </div>
           <div className="flex space-x-3">
             <select 
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={loading}
             >
               <option value="7d">Últimos 7 días</option>
               <option value="30d">Últimos 30 días</option>
               <option value="90d">Últimos 3 meses</option>
               <option value="1y">Último año</option>
             </select>
+            
+            <Button
+              variant="outline"
+              onClick={() => loadReportsData()}
+              disabled={loading}
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              <span>Actualizar</span>
+            </Button>
+            
             <Button
               variant="outline"
               onClick={() => exportData('pdf')}
@@ -138,6 +249,7 @@ export const ReportsPage: React.FC = () => {
               <Download size={16} />
               <span>Exportar PDF</span>
             </Button>
+            
             <Button
               onClick={() => generateReport('complete')}
               className="flex items-center space-x-2"
@@ -156,8 +268,14 @@ export const ReportsPage: React.FC = () => {
                 <p className="text-sm font-medium text-gray-500">Cumplimiento Promedio</p>
                 <p className="text-3xl font-bold text-green-600">{overallStats.averageCompliance}%</p>
                 <div className="flex items-center mt-1">
-                  <TrendingUp size={14} className="text-green-500 mr-1" />
-                  <span className="text-sm text-green-600">+{overallStats.improvementRate}%</span>
+                  {overallStats.improvementRate >= 0 ? (
+                    <TrendingUp size={14} className="text-green-500 mr-1" />
+                  ) : (
+                    <TrendingDown size={14} className="text-red-500 mr-1" />
+                  )}
+                  <span className={`text-sm ${overallStats.improvementRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {overallStats.improvementRate >= 0 ? '+' : ''}{overallStats.improvementRate}%
+                  </span>
                 </div>
               </div>
               <Activity className="h-12 w-12 text-green-600 opacity-20" />
@@ -230,78 +348,107 @@ export const ReportsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Tendencia de cumplimiento */}
           <Card title="Tendencia de Cumplimiento" className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={complianceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tickFormatter={formatDate}
-                />
-                <YAxis domain={[70, 100]} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('es-ES')}
-                  formatter={(value, name) => {
-                    if (name === 'compliance') return [`${value}%`, 'Cumplimiento'];
-                    return [value, name];
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="compliance" 
-                  stroke="#3B82F6" 
-                  fill="#3B82F6"
-                  fillOpacity={0.1}
-                  strokeWidth={3}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {reportsData.complianceData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={reportsData.complianceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatDate}
+                  />
+                  <YAxis domain={[70, 100]} />
+                  <Tooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString('es-ES')}
+                    formatter={(value, name) => {
+                      if (name === 'compliance') return [`${value}%`, 'Cumplimiento'];
+                      return [value, name];
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="compliance" 
+                    stroke="#3B82F6" 
+                    fill="#3B82F6"
+                    fillOpacity={0.1}
+                    strokeWidth={3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No hay datos de cumplimiento disponibles</p>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* Distribución de medicamentos */}
           <Card title="Distribución por Tipo de Medicamento" className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
-                <RechartsPieChart
-                  data={medicationDistribution}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                >
-                  {medicationDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+            {reportsData.medicationDistribution.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height="70%">
+                  <RechartsPieChart>
+                    <Tooltip formatter={(value) => [`${value}%`, 'Porcentaje']} />
+                    <RechartsPieChart
+                      data={reportsData.medicationDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                    >
+                      {reportsData.medicationDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </RechartsPieChart>
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {reportsData.medicationDistribution.map((item) => (
+                    <div key={item.name} className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: item.color }}
+                      ></div>
+                      <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
+                    </div>
                   ))}
-                </RechartsPieChart>
-              </RechartsPieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {medicationDistribution.map((item) => (
-                <div key={item.name} className="flex items-center space-x-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <PieChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No hay datos de medicamentos disponibles</p>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
 
         {/* Análisis por horarios */}
         <Card title="Patrones de Cumplimiento por Horario">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={hourlyPatterns}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis yAxisId="doses" orientation="left" />
-              <YAxis yAxisId="compliance" orientation="right" />
-              <Tooltip />
-              <Bar yAxisId="doses" dataKey="doses" fill="#3B82F6" name="Dosis programadas" />
-              <Line yAxisId="compliance" type="monotone" dataKey="compliance" stroke="#10B981" strokeWidth={3} name="% Cumplimiento" />
-            </BarChart>
-          </ResponsiveContainer>
+          {reportsData.hourlyPatterns.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={reportsData.hourlyPatterns}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" />
+                <YAxis yAxisId="doses" orientation="left" />
+                <YAxis yAxisId="compliance" orientation="right" />
+                <Tooltip />
+                <Bar yAxisId="doses" dataKey="doses" fill="#3B82F6" name="Dosis programadas" />
+                <Line yAxisId="compliance" type="monotone" dataKey="compliance" stroke="#10B981" strokeWidth={3} name="% Cumplimiento" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-64 text-gray-500">
+              <div className="text-center">
+                <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No hay datos de patrones horarios disponibles</p>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Análisis detallado */}
@@ -309,41 +456,55 @@ export const ReportsPage: React.FC = () => {
           {/* Rangos de cumplimiento */}
           <Card title="Distribución de Pacientes por Cumplimiento">
             <div className="space-y-4">
-              {patientComplianceRanges.map((range) => (
-                <div key={range.range} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-4 h-4 rounded-full" 
-                      style={{ backgroundColor: range.color }}
-                    ></div>
-                    <span className="text-sm font-medium text-gray-700">{range.range}</span>
+              {reportsData.patientComplianceRanges.length > 0 ? (
+                reportsData.patientComplianceRanges.map((range) => (
+                  <div key={range.range} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: range.color }}
+                      ></div>
+                      <span className="text-sm font-medium text-gray-700">{range.range}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg font-bold text-gray-900">{range.patients}</span>
+                      <span className="text-sm text-gray-500">pacientes</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-gray-900">{range.patients}</span>
-                    <span className="text-sm text-gray-500">pacientes</span>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No hay datos de rangos de cumplimiento</p>
                 </div>
-              ))}
+              )}
             </div>
           </Card>
 
           {/* Tipos de tratamiento */}
           <Card title="Análisis por Tipo de Tratamiento">
             <div className="space-y-4">
-              {treatmentTypes.map((treatment) => (
-                <div key={treatment.type} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">{treatment.type}</span>
-                    <span className="text-sm text-gray-600">{treatment.count} tratamientos ({treatment.percentage}%)</span>
+              {reportsData.treatmentTypes.length > 0 ? (
+                reportsData.treatmentTypes.map((treatment) => (
+                  <div key={treatment.type} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">{treatment.type}</span>
+                      <span className="text-sm text-gray-600">{treatment.count} tratamientos ({treatment.percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${treatment.percentage}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ width: `${treatment.percentage}%` }}
-                    ></div>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Pill className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No hay datos de tipos de tratamiento</p>
                 </div>
-              ))}
+              )}
             </div>
           </Card>
         </div>
