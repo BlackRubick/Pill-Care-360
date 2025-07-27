@@ -46,9 +46,9 @@ class ApiService {
 
   constructor() {
     // Asegurar que incluya el puerto correcto
-    this.baseURL = import.meta.env.VITE_API_URL || "http://18.209.162.34/api";
+    this.baseURL = import.meta.env.VITE_API_URL || "https://18.209.162.34/api";
     this.token = localStorage.getItem("access_token");
-    
+
     console.log("🌐 API Base URL configurada:", this.baseURL);
   }
 
@@ -57,7 +57,7 @@ class ApiService {
       localStorage.getItem("access_token") || localStorage.getItem("authToken");
     const headers: HeadersInit = {
       "Content-Type": "application/json",
-      "Accept": "application/json",
+      Accept: "application/json",
     };
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -69,7 +69,7 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const config: RequestInit = {
       headers: this.getHeaders(),
-      mode: 'cors',
+      mode: "cors",
       //credentials: 'include',
       ...options,
     };
@@ -89,14 +89,16 @@ class ApiService {
         statusText: response.statusText,
         url: response.url,
         type: response.type,
-        headers: Object.fromEntries(response.headers.entries())
+        headers: Object.fromEntries(response.headers.entries()),
       });
 
       if (!response.ok) {
         // Manejo especial para errores CORS
-        if (response.type === 'opaque' || response.status === 0) {
+        if (response.type === "opaque" || response.status === 0) {
           console.error("🚫 Error CORS detectado");
-          throw new Error('Error de CORS: Verifica que el servidor esté corriendo y tenga CORS configurado correctamente.');
+          throw new Error(
+            "Error de CORS: Verifica que el servidor esté corriendo y tenga CORS configurado correctamente."
+          );
         }
 
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -143,16 +145,20 @@ class ApiService {
       return data;
     } catch (error: any) {
       console.error("💥 API Request failed:", error);
-      
+
       // Manejar diferentes tipos de errores de red
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        throw new Error('Error de conexión: No se puede conectar al servidor. Verifica que el servidor esté ejecutándose.');
-      } else if (error.name === 'AbortError') {
-        throw new Error('Timeout: El servidor tardó demasiado en responder.');
-      } else if (error.message.includes('CORS')) {
-        throw new Error('Error CORS: El servidor no permite peticiones desde este origen.');
+      if (error.name === "TypeError" && error.message.includes("fetch")) {
+        throw new Error(
+          "Error de conexión: No se puede conectar al servidor. Verifica que el servidor esté ejecutándose."
+        );
+      } else if (error.name === "AbortError") {
+        throw new Error("Timeout: El servidor tardó demasiado en responder.");
+      } else if (error.message.includes("CORS")) {
+        throw new Error(
+          "Error CORS: El servidor no permite peticiones desde este origen."
+        );
       }
-      
+
       throw error;
     }
   }
@@ -866,11 +872,12 @@ class ApiService {
   async getUserTreatments(userId?: number): Promise<any[]> {
     try {
       console.log("🔍 getUserTreatments - Iniciando...");
-      
+
       const currentUser = this.getStoredUser();
       console.log("👤 Usuario almacenado:", currentUser);
-      
-      const isAdmin = currentUser?.role === "admin" || currentUser?.role === "administrator";
+
+      const isAdmin =
+        currentUser?.role === "admin" || currentUser?.role === "administrator";
       console.log("👑 Es admin:", isAdmin);
 
       if (isAdmin) {
@@ -878,18 +885,21 @@ class ApiService {
         return this.getTreatments();
       } else {
         console.log("👤 Usuario regular - obteniendo tratamientos filtrados");
-        
+
         // Método 1: Usar el endpoint directo que filtra automáticamente por caregiver
         console.log("🎯 Método 1: Llamada directa al endpoint de tratamientos");
         try {
           const directTreatments = await this.getTreatments();
           console.log("✅ Tratamientos directos:", directTreatments);
           console.log("📊 Cantidad encontrada:", directTreatments.length);
-          
+
           if (directTreatments.length > 0) {
-            console.log("📋 Estructura del primer tratamiento:", directTreatments[0]);
+            console.log(
+              "📋 Estructura del primer tratamiento:",
+              directTreatments[0]
+            );
           }
-          
+
           return directTreatments;
         } catch (directError) {
           console.error("❌ Error en método directo:", directError);
@@ -900,13 +910,15 @@ class ApiService {
         try {
           const caregiverId = userId || currentUser?.id;
           console.log("🆔 Caregiver ID:", caregiverId);
-          
+
           if (!caregiverId) {
             throw new Error("No se pudo determinar el ID del cuidador");
           }
 
           // Obtener pacientes del cuidador
-          const patients = await this.getPatients({ caregiver_id: caregiverId });
+          const patients = await this.getPatients({
+            caregiver_id: caregiverId,
+          });
           console.log("👥 Pacientes del cuidador:", patients);
           console.log("📊 Cantidad de pacientes:", patients.length);
 
@@ -917,15 +929,23 @@ class ApiService {
 
           // Obtener todos los tratamientos y filtrar por pacientes del usuario
           const allTreatments = await this.getTreatments();
-          console.log("💊 Todos los tratamientos en el sistema:", allTreatments);
-          console.log("📊 Total tratamientos en sistema:", allTreatments.length);
+          console.log(
+            "💊 Todos los tratamientos en el sistema:",
+            allTreatments
+          );
+          console.log(
+            "📊 Total tratamientos en sistema:",
+            allTreatments.length
+          );
 
           const patientIds = patients.map((p: any) => p.id);
           console.log("🔢 IDs de pacientes del cuidador:", patientIds);
 
           const userTreatments = allTreatments.filter((t: any) => {
             const belongsToUser = patientIds.includes(t.patient_id);
-            console.log(`🔍 Tratamiento ${t.id} (paciente ${t.patient_id}): pertenece al usuario = ${belongsToUser}`);
+            console.log(
+              `🔍 Tratamiento ${t.id} (paciente ${t.patient_id}): pertenece al usuario = ${belongsToUser}`
+            );
             return belongsToUser;
           });
 
@@ -933,7 +953,6 @@ class ApiService {
           console.log("📊 Cantidad final:", userTreatments.length);
 
           return userTreatments;
-          
         } catch (filterError) {
           console.error("❌ Error en método de filtrado:", filterError);
         }
@@ -943,23 +962,32 @@ class ApiService {
         try {
           const patients = await this.getPatients();
           console.log("👥 Pacientes disponibles:", patients);
-          
+
           const userTreatments: any[] = [];
-          
+
           for (const patient of patients) {
             try {
-              console.log(`🔍 Obteniendo tratamientos para paciente ${patient.id}`);
-              const patientTreatments = await this.getAllPatientTreatments(patient.id);
-              console.log(`📋 Tratamientos del paciente ${patient.id}:`, patientTreatments);
+              console.log(
+                `🔍 Obteniendo tratamientos para paciente ${patient.id}`
+              );
+              const patientTreatments = await this.getAllPatientTreatments(
+                patient.id
+              );
+              console.log(
+                `📋 Tratamientos del paciente ${patient.id}:`,
+                patientTreatments
+              );
               userTreatments.push(...patientTreatments);
             } catch (patientError) {
-              console.warn(`⚠️ Error obteniendo tratamientos del paciente ${patient.id}:`, patientError);
+              console.warn(
+                `⚠️ Error obteniendo tratamientos del paciente ${patient.id}:`,
+                patientError
+              );
             }
           }
-          
+
           console.log("✅ Tratamientos combinados:", userTreatments);
           return userTreatments;
-          
         } catch (fallbackError) {
           console.error("❌ Error en método fallback:", fallbackError);
         }
@@ -968,7 +996,6 @@ class ApiService {
       // Si todos los métodos fallan
       console.error("💥 Todos los métodos fallaron");
       return [];
-      
     } catch (error) {
       console.error("❌ Error general en getUserTreatments:", error);
       return [];
@@ -984,32 +1011,45 @@ class ApiService {
       console.log(`✅ Alarmas obtenidas:`, alarms);
       return alarms || [];
     } catch (error: any) {
-      console.warn(`⚠️ Error obteniendo alarmas del tratamiento ${treatmentId}:`, error.message);
+      console.warn(
+        `⚠️ Error obteniendo alarmas del tratamiento ${treatmentId}:`,
+        error.message
+      );
       // Retornar array vacío en lugar de fallar
       return [];
     }
   }
 
-  async createTreatmentAlarm(treatmentId: number, alarmData: any): Promise<any> {
-    console.log(`⏰ Creando alarma para tratamiento ${treatmentId}:`, alarmData);
-    
+  async createTreatmentAlarm(
+    treatmentId: number,
+    alarmData: any
+  ): Promise<any> {
+    console.log(
+      `⏰ Creando alarma para tratamiento ${treatmentId}:`,
+      alarmData
+    );
+
     // Asegurarse de que los datos estén en el formato correcto para la BD
     const formattedAlarmData = {
       time: alarmData.time,
       is_active: alarmData.is_active !== undefined ? alarmData.is_active : true,
-      sound_enabled: alarmData.sound_enabled !== undefined ? alarmData.sound_enabled : true,
-      visual_enabled: alarmData.visual_enabled !== undefined ? alarmData.visual_enabled : true,
-      description: alarmData.description || ''
+      sound_enabled:
+        alarmData.sound_enabled !== undefined ? alarmData.sound_enabled : true,
+      visual_enabled:
+        alarmData.visual_enabled !== undefined
+          ? alarmData.visual_enabled
+          : true,
+      description: alarmData.description || "",
     };
-    
+
     console.log(`📤 Datos formateados para alarma:`, formattedAlarmData);
-    
+
     try {
       const result = await this.request(`/treatments/${treatmentId}/alarms`, {
         method: "POST",
         body: JSON.stringify(formattedAlarmData),
       });
-      
+
       console.log(`✅ Alarma creada exitosamente:`, result);
       return result;
     } catch (error: any) {
@@ -1018,14 +1058,19 @@ class ApiService {
     }
   }
 
-  async deleteTreatmentAlarm(treatmentId: number, alarmId: number): Promise<void> {
-    console.log(`🗑️ Eliminando alarma ${alarmId} del tratamiento ${treatmentId}...`);
-    
+  async deleteTreatmentAlarm(
+    treatmentId: number,
+    alarmId: number
+  ): Promise<void> {
+    console.log(
+      `🗑️ Eliminando alarma ${alarmId} del tratamiento ${treatmentId}...`
+    );
+
     try {
       await this.request(`/treatments/${treatmentId}/alarms/${alarmId}`, {
         method: "DELETE",
       });
-      
+
       console.log(`✅ Alarma ${alarmId} eliminada exitosamente`);
     } catch (error: any) {
       console.error(`❌ Error eliminando alarma:`, error);
@@ -1033,23 +1078,33 @@ class ApiService {
     }
   }
 
-  async updateTreatmentAlarm(treatmentId: number, alarmId: number, alarmData: any): Promise<any> {
-    console.log(`✏️ Actualizando alarma ${alarmId} del tratamiento ${treatmentId}:`, alarmData);
-    
+  async updateTreatmentAlarm(
+    treatmentId: number,
+    alarmId: number,
+    alarmData: any
+  ): Promise<any> {
+    console.log(
+      `✏️ Actualizando alarma ${alarmId} del tratamiento ${treatmentId}:`,
+      alarmData
+    );
+
     const formattedAlarmData = {
       time: alarmData.time,
       is_active: alarmData.is_active,
       sound_enabled: alarmData.sound_enabled,
       visual_enabled: alarmData.visual_enabled,
-      description: alarmData.description || ''
+      description: alarmData.description || "",
     };
-    
+
     try {
-      const result = await this.request(`/treatments/${treatmentId}/alarms/${alarmId}`, {
-        method: "PUT",
-        body: JSON.stringify(formattedAlarmData),
-      });
-      
+      const result = await this.request(
+        `/treatments/${treatmentId}/alarms/${alarmId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(formattedAlarmData),
+        }
+      );
+
       console.log(`✅ Alarma ${alarmId} actualizada exitosamente:`, result);
       return result;
     } catch (error: any) {
@@ -1058,31 +1113,40 @@ class ApiService {
     }
   }
 
-  async syncTreatmentAlarms(treatmentId: number, newAlarms: any[]): Promise<any[]> {
+  async syncTreatmentAlarms(
+    treatmentId: number,
+    newAlarms: any[]
+  ): Promise<any[]> {
     console.log(`🔄 Sincronizando alarmas del tratamiento ${treatmentId}...`);
     console.log(`📋 Nuevas alarmas:`, newAlarms);
-    
+
     try {
       // Paso 1: Obtener alarmas actuales
       const currentAlarms = await this.getTreatmentAlarms(treatmentId);
       console.log(`📋 Alarmas actuales:`, currentAlarms);
-      
+
       // Paso 2: Eliminar alarmas actuales
       for (const alarm of currentAlarms) {
         try {
           await this.deleteTreatmentAlarm(treatmentId, alarm.id);
           console.log(`🗑️ Alarma ${alarm.id} eliminada`);
         } catch (deleteError) {
-          console.warn(`⚠️ No se pudo eliminar alarma ${alarm.id}:`, deleteError);
+          console.warn(
+            `⚠️ No se pudo eliminar alarma ${alarm.id}:`,
+            deleteError
+          );
           // Continuar con las demás
         }
       }
-      
+
       // Paso 3: Crear las nuevas alarmas
       const createdAlarms = [];
       for (const [index, alarm] of newAlarms.entries()) {
         try {
-          const createdAlarm = await this.createTreatmentAlarm(treatmentId, alarm);
+          const createdAlarm = await this.createTreatmentAlarm(
+            treatmentId,
+            alarm
+          );
           createdAlarms.push(createdAlarm);
           console.log(`✅ Alarma ${index + 1} creada exitosamente`);
         } catch (createError) {
@@ -1090,10 +1154,11 @@ class ApiService {
           throw createError;
         }
       }
-      
-      console.log(`✅ Sincronización de alarmas completada. ${createdAlarms.length} alarmas creadas.`);
+
+      console.log(
+        `✅ Sincronización de alarmas completada. ${createdAlarms.length} alarmas creadas.`
+      );
       return createdAlarms;
-      
     } catch (error: any) {
       console.error(`❌ Error sincronizando alarmas:`, error);
       throw new Error(`Error sincronizando alarmas: ${error.message}`);
@@ -1220,7 +1285,7 @@ class ApiService {
       { method: "GET", url: "/patients" },
       { method: "GET", url: "/treatments/" },
       { method: "GET", url: "/treatments" },
-      { method: "GET", url: "/medications/" },  
+      { method: "GET", url: "/medications/" },
       { method: "GET", url: "/medications" },
       { method: "GET", url: "/health" },
       { method: "GET", url: "/docs" },
@@ -1253,16 +1318,16 @@ class ApiService {
   // Método de diagnóstico mejorado
   async runCompleteDiagnosis(): Promise<void> {
     console.log("🔍 === DIAGNÓSTICO COMPLETO DE CONEXIÓN ===");
-    
+
     // 1. Información básica
     console.log("\n📱 Información del cliente:");
     console.log("Origin:", window.location.origin);
     console.log("URL actual configurada:", this.baseURL);
-    
+
     // 2. Probar endpoints básicos
     console.log("\n🌐 Probando endpoints básicos:");
     const endpoints = ["/health", "/", "/docs"];
-    
+
     for (const endpoint of endpoints) {
       try {
         const result = await this.request(endpoint);
@@ -1271,28 +1336,33 @@ class ApiService {
         console.error(`❌ ${endpoint}:`, error.message);
       }
     }
-    
+
     // 3. Probar endpoints de API
     console.log("\n💊 Probando endpoints de API:");
     const apiEndpoints = ["/patients", "/medications", "/treatments"];
-    
+
     for (const endpoint of apiEndpoints) {
       try {
         const result = await this.request(endpoint);
-        console.log(`✅ ${endpoint}:`, Array.isArray(result) ? `${result.length} elementos` : result);
+        console.log(
+          `✅ ${endpoint}:`,
+          Array.isArray(result) ? `${result.length} elementos` : result
+        );
       } catch (error: any) {
         console.error(`❌ ${endpoint}:`, error.message);
       }
     }
-    
+
     // 4. Probar alarmas si hay tratamientos
     console.log("\n⏰ Probando funcionalidad de alarmas:");
     try {
       const treatments = await this.getTreatments();
       if (treatments.length > 0) {
         const firstTreatment = treatments[0];
-        console.log(`🔍 Probando alarmas del tratamiento ${firstTreatment.id}...`);
-        
+        console.log(
+          `🔍 Probando alarmas del tratamiento ${firstTreatment.id}...`
+        );
+
         const alarms = await this.getTreatmentAlarms(firstTreatment.id);
         console.log(`✅ Alarmas encontradas:`, alarms);
       } else {
@@ -1301,516 +1371,535 @@ class ApiService {
     } catch (error: any) {
       console.error("❌ Error probando alarmas:", error.message);
     }
-    
+
     console.log("\n🏁 === FIN DIAGNÓSTICO ===");
   }
 
+  // AGREGAR ESTOS MÉTODOS AL FINAL DE TU CLASE ApiService
+  // Justo antes del cierre de la clase (antes de la última llave })
 
+  // ----- MÉTODOS DE REPORTES (NUEVOS) -----
 
-// AGREGAR ESTOS MÉTODOS AL FINAL DE TU CLASE ApiService
-// Justo antes del cierre de la clase (antes de la última llave })
-
-// ----- MÉTODOS DE REPORTES (NUEVOS) -----
-
-/**
- * Obtener estadísticas generales de reportes
- */
-async getReportsOverviewStats(period: string = '30d'): Promise<any> {
-  try {
-    console.log(`📊 Obteniendo estadísticas de reportes para período: ${period}`);
-    const stats = await this.request(`/reports/stats/overview?period=${period}`);
-    console.log('✅ Estadísticas de reportes obtenidas:', stats);
-    return stats;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo estadísticas de reportes:', error);
-    // Fallback con datos por defecto
-    return {
-      totalPatients: 0,
-      totalTreatments: 0,
-      averageCompliance: 0,
-      totalDoses: 0,
-      missedDoses: 0,
-      alerts: 0,
-      improvementRate: 0
-    };
-  }
-}
-
-/**
- * Obtener tendencia de cumplimiento
- */
-async getComplianceTrend(period: string = '30d'): Promise<any[]> {
-  try {
-    console.log(`📈 Obteniendo tendencia de cumplimiento para período: ${period}`);
-    const trend = await this.request(`/reports/compliance/trend?period=${period}`);
-    console.log('✅ Tendencia de cumplimiento obtenida:', trend);
-    return trend;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo tendencia de cumplimiento:', error);
-    
-    // Fallback con datos simulados para que la UI no se rompa
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : 15;
-    const fallbackData = [];
-    
-    for (let i = 0; i < days; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i));
-      
-      fallbackData.push({
-        date: date.toISOString().split('T')[0],
-        compliance: 75 + Math.random() * 20, // 75-95%
-        patients: 5 + Math.floor(Math.random() * 15), // 5-20 pacientes
-        doses: 50 + Math.floor(Math.random() * 100) // 50-150 dosis
-      });
-    }
-    
-    return fallbackData;
-  }
-}
-
-/**
- * Obtener distribución de medicamentos por tipo
- */
-async getMedicationDistribution(): Promise<any[]> {
-  try {
-    console.log('💊 Obteniendo distribución de medicamentos...');
-    const distribution = await this.request('/reports/medications/distribution');
-    console.log('✅ Distribución de medicamentos obtenida:', distribution);
-    return distribution;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo distribución de medicamentos:', error);
-    
-    // Fallback con datos por defecto
-    return [
-      { name: 'Cardiovasculares', value: 35, color: '#3B82F6', count: 0 },
-      { name: 'Diabetes', value: 28, color: '#10B981', count: 0 },
-      { name: 'Analgésicos', value: 18, color: '#F59E0B', count: 0 },
-      { name: 'Antibióticos', value: 12, color: '#EF4444', count: 0 },
-      { name: 'Otros', value: 7, color: '#8B5CF6', count: 0 }
-    ];
-  }
-}
-
-/**
- * Obtener patrones horarios de cumplimiento
- */
-async getHourlyPatterns(): Promise<any[]> {
-  try {
-    console.log('⏰ Obteniendo patrones horarios...');
-    const patterns = await this.request('/reports/patterns/hourly');
-    console.log('✅ Patrones horarios obtenidos:', patterns);
-    return patterns;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo patrones horarios:', error);
-    
-    // Fallback con datos por defecto
-    return [
-      { hour: '06:00', doses: 12, compliance: 85 },
-      { hour: '08:00', doses: 45, compliance: 92 },
-      { hour: '12:00', doses: 38, compliance: 88 },
-      { hour: '18:00', doses: 42, compliance: 90 },
-      { hour: '20:00', doses: 35, compliance: 87 },
-      { hour: '22:00', doses: 28, compliance: 82 }
-    ];
-  }
-}
-
-/**
- * Obtener rangos de cumplimiento de pacientes
- */
-async getPatientComplianceRanges(): Promise<any[]> {
-  try {
-    console.log('👥 Obteniendo rangos de cumplimiento de pacientes...');
-    const ranges = await this.request('/reports/patients/compliance-ranges');
-    console.log('✅ Rangos de cumplimiento obtenidos:', ranges);
-    return ranges;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo rangos de cumplimiento:', error);
-    
-    // Fallback con datos por defecto
-    return [
-      { range: '90-100%', patients: 15, color: '#10B981' },
-      { range: '80-89%', patients: 8, color: '#F59E0B' },
-      { range: '70-79%', patients: 3, color: '#EF4444' },
-      { range: '60-69%', patients: 1, color: '#DC2626' },
-      { range: '<60%', patients: 0, color: '#7F1D1D' }
-    ];
-  }
-}
-
-/**
- * Obtener tipos de tratamiento
- */
-async getTreatmentTypes(): Promise<any[]> {
-  try {
-    console.log('💉 Obteniendo tipos de tratamiento...');
-    const types = await this.request('/reports/treatments/types');
-    console.log('✅ Tipos de tratamiento obtenidos:', types);
-    return types;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo tipos de tratamiento:', error);
-    
-    // Fallback con datos por defecto
-    return [
-      { type: 'Crónicos', count: 18, percentage: 67 },
-      { type: 'Agudos', count: 6, percentage: 22 },
-      { type: 'Preventivos', count: 3, percentage: 11 }
-    ];
-  }
-}
-
-/**
- * Generar reporte específico
- */
-async generateReport(
-  reportType: string, 
-  format: string = 'json', 
-  period: string = '30d'
-): Promise<any> {
-  try {
-    console.log(`📄 Generando reporte: ${reportType} en formato ${format} para período ${period}`);
-    
-    const result = await this.request(`/reports/generate?report_type=${reportType}&format=${format}&period=${period}`, {
-      method: 'POST'
-    });
-    
-    console.log('✅ Reporte generado:', result);
-    return result;
-  } catch (error: any) {
-    console.error('❌ Error generando reporte:', error);
-    throw new Error(`Error generando reporte: ${error.message}`);
-  }
-}
-
-/**
- * Exportar datos en diferentes formatos
- */
-async exportData(format: string, dataType: string = 'all'): Promise<any> {
-  try {
-    console.log(`📤 Exportando datos: ${dataType} en formato ${format}`);
-    
-    const result = await this.request(`/reports/export?format=${format}&data_type=${dataType}`, {
-      method: 'POST'
-    });
-    
-    console.log('✅ Datos exportados:', result);
-    return result;
-  } catch (error: any) {
-    console.error('❌ Error exportando datos:', error);
-    throw new Error(`Error exportando datos: ${error.message}`);
-  }
-}
-
-/**
- * Obtener todos los datos necesarios para la página de reportes
- */
-async getReportsPageData(period: string = '30d'): Promise<any> {
-  try {
-    console.log(`📊 Cargando datos completos de reportes para período: ${period}`);
-    
-    // Hacer todas las llamadas en paralelo para mejor rendimiento
-    const [
-      overallStats,
-      complianceData,
-      medicationDistribution,
-      hourlyPatterns,
-      patientComplianceRanges,
-      treatmentTypes
-    ] = await Promise.allSettled([
-      this.getReportsOverviewStats(period),
-      this.getComplianceTrend(period),
-      this.getMedicationDistribution(),
-      this.getHourlyPatterns(),
-      this.getPatientComplianceRanges(),
-      this.getTreatmentTypes()
-    ]);
-
-    // Extraer valores o usar fallbacks
-    const extractValue = (result: any, fallback: any) => 
-      result.status === 'fulfilled' ? result.value : fallback;
-
-    const reportsData = {
-      overallStats: extractValue(overallStats, {
+  /**
+   * Obtener estadísticas generales de reportes
+   */
+  async getReportsOverviewStats(period: string = "30d"): Promise<any> {
+    try {
+      console.log(
+        `📊 Obteniendo estadísticas de reportes para período: ${period}`
+      );
+      const stats = await this.request(
+        `/reports/stats/overview?period=${period}`
+      );
+      console.log("✅ Estadísticas de reportes obtenidas:", stats);
+      return stats;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo estadísticas de reportes:", error);
+      // Fallback con datos por defecto
+      return {
         totalPatients: 0,
         totalTreatments: 0,
         averageCompliance: 0,
         totalDoses: 0,
         missedDoses: 0,
         alerts: 0,
-        improvementRate: 0
-      }),
-      complianceData: extractValue(complianceData, []),
-      medicationDistribution: extractValue(medicationDistribution, []),
-      hourlyPatterns: extractValue(hourlyPatterns, []),
-      patientComplianceRanges: extractValue(patientComplianceRanges, []),
-      treatmentTypes: extractValue(treatmentTypes, [])
-    };
-
-    console.log('✅ Datos completos de reportes cargados:', reportsData);
-    return reportsData;
-    
-  } catch (error: any) {
-    console.error('❌ Error cargando datos de reportes:', error);
-    throw new Error(`Error cargando datos de reportes: ${error.message}`);
+        improvementRate: 0,
+      };
+    }
   }
-}
 
+  /**
+   * Obtener tendencia de cumplimiento
+   */
+  async getComplianceTrend(period: string = "30d"): Promise<any[]> {
+    try {
+      console.log(
+        `📈 Obteniendo tendencia de cumplimiento para período: ${period}`
+      );
+      const trend = await this.request(
+        `/reports/compliance/trend?period=${period}`
+      );
+      console.log("✅ Tendencia de cumplimiento obtenida:", trend);
+      return trend;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo tendencia de cumplimiento:", error);
 
-async getAlerts(
-  severity?: string,
-  alertType?: string,
-  showRead: boolean = true,
-  limit: number = 50
-): Promise<any[]> {
-  try {
-    console.log(`🚨 Obteniendo alertas...`);
-    
-    const params = new URLSearchParams();
-    if (severity) params.append('severity', severity);
-    if (alertType) params.append('alert_type', alertType);
-    params.append('show_read', showRead.toString());
-    params.append('limit', limit.toString());
-    
-    const alerts = await this.request(`/alerts/?${params.toString()}`);
-    console.log('✅ Alertas obtenidas:', alerts);
-    return alerts;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo alertas:', error);
-    
-    // Fallback con datos simulados si la API falla
-    return this.generateFallbackAlerts();
+      // Fallback con datos simulados para que la UI no se rompa
+      const days = period === "7d" ? 7 : period === "30d" ? 30 : 15;
+      const fallbackData = [];
+
+      for (let i = 0; i < days; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - (days - i));
+
+        fallbackData.push({
+          date: date.toISOString().split("T")[0],
+          compliance: 75 + Math.random() * 20, // 75-95%
+          patients: 5 + Math.floor(Math.random() * 15), // 5-20 pacientes
+          doses: 50 + Math.floor(Math.random() * 100), // 50-150 dosis
+        });
+      }
+
+      return fallbackData;
+    }
   }
-}
 
-/**
- * Obtener estadísticas de alertas
- */
-async getAlertsStats(): Promise<any> {
-  try {
-    console.log('📊 Obteniendo estadísticas de alertas...');
-    const stats = await this.request('/alerts/stats');
-    console.log('✅ Estadísticas de alertas obtenidas:', stats);
-    return stats;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo estadísticas de alertas:', error);
-    
-    // Fallback con estadísticas por defecto
-    return {
-      unread_count: 0,
-      high_priority_count: 0,
-      medium_priority_count: 0,
-      missed_dose_count: 0,
-      total_count: 0
-    };
+  /**
+   * Obtener distribución de medicamentos por tipo
+   */
+  async getMedicationDistribution(): Promise<any[]> {
+    try {
+      console.log("💊 Obteniendo distribución de medicamentos...");
+      const distribution = await this.request(
+        "/reports/medications/distribution"
+      );
+      console.log("✅ Distribución de medicamentos obtenida:", distribution);
+      return distribution;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo distribución de medicamentos:", error);
+
+      // Fallback con datos por defecto
+      return [
+        { name: "Cardiovasculares", value: 35, color: "#3B82F6", count: 0 },
+        { name: "Diabetes", value: 28, color: "#10B981", count: 0 },
+        { name: "Analgésicos", value: 18, color: "#F59E0B", count: 0 },
+        { name: "Antibióticos", value: 12, color: "#EF4444", count: 0 },
+        { name: "Otros", value: 7, color: "#8B5CF6", count: 0 },
+      ];
+    }
   }
-}
 
-/**
- * Marcar alerta como leída
- */
-async markAlertAsRead(alertId: string): Promise<any> {
-  try {
-    console.log(`📖 Marcando alerta ${alertId} como leída...`);
-    const result = await this.request(`/alerts/${alertId}/read`, {
-      method: 'PATCH'
-    });
-    console.log('✅ Alerta marcada como leída:', result);
-    return result;
-  } catch (error: any) {
-    console.error(`❌ Error marcando alerta ${alertId} como leída:`, error);
-    throw new Error(`Error marcando alerta como leída: ${error.message}`);
+  /**
+   * Obtener patrones horarios de cumplimiento
+   */
+  async getHourlyPatterns(): Promise<any[]> {
+    try {
+      console.log("⏰ Obteniendo patrones horarios...");
+      const patterns = await this.request("/reports/patterns/hourly");
+      console.log("✅ Patrones horarios obtenidos:", patterns);
+      return patterns;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo patrones horarios:", error);
+
+      // Fallback con datos por defecto
+      return [
+        { hour: "06:00", doses: 12, compliance: 85 },
+        { hour: "08:00", doses: 45, compliance: 92 },
+        { hour: "12:00", doses: 38, compliance: 88 },
+        { hour: "18:00", doses: 42, compliance: 90 },
+        { hour: "20:00", doses: 35, compliance: 87 },
+        { hour: "22:00", doses: 28, compliance: 82 },
+      ];
+    }
   }
-}
 
-/**
- * Marcar alerta como no leída
- */
-async markAlertAsUnread(alertId: string): Promise<any> {
-  try {
-    console.log(`📩 Marcando alerta ${alertId} como no leída...`);
-    const result = await this.request(`/alerts/${alertId}/unread`, {
-      method: 'PATCH'
-    });
-    console.log('✅ Alerta marcada como no leída:', result);
-    return result;
-  } catch (error: any) {
-    console.error(`❌ Error marcando alerta ${alertId} como no leída:`, error);
-    throw new Error(`Error marcando alerta como no leída: ${error.message}`);
+  /**
+   * Obtener rangos de cumplimiento de pacientes
+   */
+  async getPatientComplianceRanges(): Promise<any[]> {
+    try {
+      console.log("👥 Obteniendo rangos de cumplimiento de pacientes...");
+      const ranges = await this.request("/reports/patients/compliance-ranges");
+      console.log("✅ Rangos de cumplimiento obtenidos:", ranges);
+      return ranges;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo rangos de cumplimiento:", error);
+
+      // Fallback con datos por defecto
+      return [
+        { range: "90-100%", patients: 15, color: "#10B981" },
+        { range: "80-89%", patients: 8, color: "#F59E0B" },
+        { range: "70-79%", patients: 3, color: "#EF4444" },
+        { range: "60-69%", patients: 1, color: "#DC2626" },
+        { range: "<60%", patients: 0, color: "#7F1D1D" },
+      ];
+    }
   }
-}
 
-/**
- * Eliminar alerta
- */
-async deleteAlert(alertId: string): Promise<any> {
-  try {
-    console.log(`🗑️ Eliminando alerta ${alertId}...`);
-    const result = await this.request(`/alerts/${alertId}`, {
-      method: 'DELETE'
-    });
-    console.log('✅ Alerta eliminada:', result);
-    return result;
-  } catch (error: any) {
-    console.error(`❌ Error eliminando alerta ${alertId}:`, error);
-    throw new Error(`Error eliminando alerta: ${error.message}`);
+  /**
+   * Obtener tipos de tratamiento
+   */
+  async getTreatmentTypes(): Promise<any[]> {
+    try {
+      console.log("💉 Obteniendo tipos de tratamiento...");
+      const types = await this.request("/reports/treatments/types");
+      console.log("✅ Tipos de tratamiento obtenidos:", types);
+      return types;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo tipos de tratamiento:", error);
+
+      // Fallback con datos por defecto
+      return [
+        { type: "Crónicos", count: 18, percentage: 67 },
+        { type: "Agudos", count: 6, percentage: 22 },
+        { type: "Preventivos", count: 3, percentage: 11 },
+      ];
+    }
   }
-}
 
-/**
- * Marcar todas las alertas como leídas
- */
-async markAllAlertsAsRead(): Promise<any> {
-  try {
-    console.log('📚 Marcando todas las alertas como leídas...');
-    const result = await this.request('/alerts/mark-all-read', {
-      method: 'PATCH'
-    });
-    console.log('✅ Todas las alertas marcadas como leídas:', result);
-    return result;
-  } catch (error: any) {
-    console.error('❌ Error marcando todas las alertas como leídas:', error);
-    throw new Error(`Error marcando todas las alertas como leídas: ${error.message}`);
+  /**
+   * Generar reporte específico
+   */
+  async generateReport(
+    reportType: string,
+    format: string = "json",
+    period: string = "30d"
+  ): Promise<any> {
+    try {
+      console.log(
+        `📄 Generando reporte: ${reportType} en formato ${format} para período ${period}`
+      );
+
+      const result = await this.request(
+        `/reports/generate?report_type=${reportType}&format=${format}&period=${period}`,
+        {
+          method: "POST",
+        }
+      );
+
+      console.log("✅ Reporte generado:", result);
+      return result;
+    } catch (error: any) {
+      console.error("❌ Error generando reporte:", error);
+      throw new Error(`Error generando reporte: ${error.message}`);
+    }
   }
-}
 
-/**
- * Obtener tipos de alertas disponibles
- */
-async getAlertTypes(): Promise<any[]> {
-  try {
-    console.log('🏷️ Obteniendo tipos de alertas...');
-    const types = await this.request('/alerts/types');
-    console.log('✅ Tipos de alertas obtenidos:', types);
-    return types;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo tipos de alertas:', error);
-    
-    // Fallback con tipos por defecto
-    return [
-      { value: 'missed_dose', label: 'Dosis Perdida' },
-      { value: 'late_dose', label: 'Dosis Tardía' },
-      { value: 'low_compliance', label: 'Bajo Cumplimiento' },
-      { value: 'treatment_end', label: 'Fin de Tratamiento' }
-    ];
+  /**
+   * Exportar datos en diferentes formatos
+   */
+  async exportData(format: string, dataType: string = "all"): Promise<any> {
+    try {
+      console.log(`📤 Exportando datos: ${dataType} en formato ${format}`);
+
+      const result = await this.request(
+        `/reports/export?format=${format}&data_type=${dataType}`,
+        {
+          method: "POST",
+        }
+      );
+
+      console.log("✅ Datos exportados:", result);
+      return result;
+    } catch (error: any) {
+      console.error("❌ Error exportando datos:", error);
+      throw new Error(`Error exportando datos: ${error.message}`);
+    }
   }
-}
 
-/**
- * Obtener severidades de alertas disponibles
- */
-async getAlertSeverities(): Promise<any[]> {
-  try {
-    console.log('⚠️ Obteniendo severidades de alertas...');
-    const severities = await this.request('/alerts/severities');
-    console.log('✅ Severidades de alertas obtenidas:', severities);
-    return severities;
-  } catch (error: any) {
-    console.error('❌ Error obteniendo severidades de alertas:', error);
-    
-    // Fallback con severidades por defecto
-    return [
-      { value: 'high', label: 'Alta' },
-      { value: 'medium', label: 'Media' },
-      { value: 'low', label: 'Baja' }
-    ];
+  /**
+   * Obtener todos los datos necesarios para la página de reportes
+   */
+  async getReportsPageData(period: string = "30d"): Promise<any> {
+    try {
+      console.log(
+        `📊 Cargando datos completos de reportes para período: ${period}`
+      );
+
+      // Hacer todas las llamadas en paralelo para mejor rendimiento
+      const [
+        overallStats,
+        complianceData,
+        medicationDistribution,
+        hourlyPatterns,
+        patientComplianceRanges,
+        treatmentTypes,
+      ] = await Promise.allSettled([
+        this.getReportsOverviewStats(period),
+        this.getComplianceTrend(period),
+        this.getMedicationDistribution(),
+        this.getHourlyPatterns(),
+        this.getPatientComplianceRanges(),
+        this.getTreatmentTypes(),
+      ]);
+
+      // Extraer valores o usar fallbacks
+      const extractValue = (result: any, fallback: any) =>
+        result.status === "fulfilled" ? result.value : fallback;
+
+      const reportsData = {
+        overallStats: extractValue(overallStats, {
+          totalPatients: 0,
+          totalTreatments: 0,
+          averageCompliance: 0,
+          totalDoses: 0,
+          missedDoses: 0,
+          alerts: 0,
+          improvementRate: 0,
+        }),
+        complianceData: extractValue(complianceData, []),
+        medicationDistribution: extractValue(medicationDistribution, []),
+        hourlyPatterns: extractValue(hourlyPatterns, []),
+        patientComplianceRanges: extractValue(patientComplianceRanges, []),
+        treatmentTypes: extractValue(treatmentTypes, []),
+      };
+
+      console.log("✅ Datos completos de reportes cargados:", reportsData);
+      return reportsData;
+    } catch (error: any) {
+      console.error("❌ Error cargando datos de reportes:", error);
+      throw new Error(`Error cargando datos de reportes: ${error.message}`);
+    }
   }
-}
 
-/**
- * Obtener todos los datos necesarios para la página de alertas
- */
-async getAlertsPageData(
-  severity?: string,
-  alertType?: string,
-  showRead: boolean = true
-): Promise<any> {
-  try {
-    console.log('🚨 Cargando datos completos de alertas...');
-    
-    // Hacer llamadas en paralelo
-    const [alerts, stats, types, severities] = await Promise.allSettled([
-      this.getAlerts(severity, alertType, showRead),
-      this.getAlertsStats(),
-      this.getAlertTypes(),
-      this.getAlertSeverities()
-    ]);
+  async getAlerts(
+    severity?: string,
+    alertType?: string,
+    showRead: boolean = true,
+    limit: number = 50
+  ): Promise<any[]> {
+    try {
+      console.log(`🚨 Obteniendo alertas...`);
 
-    // Extraer valores o usar fallbacks
-    const extractValue = (result: any, fallback: any) => 
-      result.status === 'fulfilled' ? result.value : fallback;
+      const params = new URLSearchParams();
+      if (severity) params.append("severity", severity);
+      if (alertType) params.append("alert_type", alertType);
+      params.append("show_read", showRead.toString());
+      params.append("limit", limit.toString());
 
-    const alertsData = {
-      alerts: extractValue(alerts, []),
-      stats: extractValue(stats, {
+      const alerts = await this.request(`/alerts/?${params.toString()}`);
+      console.log("✅ Alertas obtenidas:", alerts);
+      return alerts;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo alertas:", error);
+
+      // Fallback con datos simulados si la API falla
+      return this.generateFallbackAlerts();
+    }
+  }
+
+  /**
+   * Obtener estadísticas de alertas
+   */
+  async getAlertsStats(): Promise<any> {
+    try {
+      console.log("📊 Obteniendo estadísticas de alertas...");
+      const stats = await this.request("/alerts/stats");
+      console.log("✅ Estadísticas de alertas obtenidas:", stats);
+      return stats;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo estadísticas de alertas:", error);
+
+      // Fallback con estadísticas por defecto
+      return {
         unread_count: 0,
         high_priority_count: 0,
         medium_priority_count: 0,
         missed_dose_count: 0,
-        total_count: 0
-      }),
-      types: extractValue(types, []),
-      severities: extractValue(severities, [])
-    };
-
-    console.log('✅ Datos completos de alertas cargados:', alertsData);
-    return alertsData;
-
-  } catch (error: any) {
-    console.error('❌ Error cargando datos de alertas:', error);
-    throw new Error(`Error cargando datos de alertas: ${error.message}`);
-  }
-}
-
-/**
- * Generar alertas de fallback cuando la API no está disponible
- */
-private generateFallbackAlerts(): any[] {
-  console.log('⚠️ Generando alertas de fallback...');
-  
-  const currentUser = this.getStoredUser();
-  const baseAlerts = [
-    {
-      id: '1',
-      patient_id: 1,
-      patient_name: 'María García',
-      treatment_id: 1,
-      medication_name: 'Metformina 500mg',
-      type: 'missed_dose',
-      message: 'María García no tomó su dosis de Metformina 500mg programada',
-      severity: 'high',
-      is_read: false,
-      created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30 min ago
-    },
-    {
-      id: '2',
-      patient_id: 2,
-      patient_name: 'Juan Pérez',
-      treatment_id: 2,
-      medication_name: 'Ibuprofeno 400mg',
-      type: 'late_dose',
-      message: 'Juan Pérez tomó su dosis de Ibuprofeno 400mg con retraso',
-      severity: 'medium',
-      is_read: false,
-      created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString() // 45 min ago
-    },
-    {
-      id: '3',
-      patient_id: 3,
-      patient_name: 'Ana López',
-      treatment_id: 3,
-      medication_name: 'Enalapril 10mg',
-      type: 'low_compliance',
-      message: 'Ana López tiene un cumplimiento del 65% en los últimos 7 días',
-      severity: 'high',
-      is_read: true,
-      created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
+        total_count: 0,
+      };
     }
-  ];
+  }
 
-  return baseAlerts;
-}
+  /**
+   * Marcar alerta como leída
+   */
+  async markAlertAsRead(alertId: string): Promise<any> {
+    try {
+      console.log(`📖 Marcando alerta ${alertId} como leída...`);
+      const result = await this.request(`/alerts/${alertId}/read`, {
+        method: "PATCH",
+      });
+      console.log("✅ Alerta marcada como leída:", result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Error marcando alerta ${alertId} como leída:`, error);
+      throw new Error(`Error marcando alerta como leída: ${error.message}`);
+    }
+  }
 
+  /**
+   * Marcar alerta como no leída
+   */
+  async markAlertAsUnread(alertId: string): Promise<any> {
+    try {
+      console.log(`📩 Marcando alerta ${alertId} como no leída...`);
+      const result = await this.request(`/alerts/${alertId}/unread`, {
+        method: "PATCH",
+      });
+      console.log("✅ Alerta marcada como no leída:", result);
+      return result;
+    } catch (error: any) {
+      console.error(
+        `❌ Error marcando alerta ${alertId} como no leída:`,
+        error
+      );
+      throw new Error(`Error marcando alerta como no leída: ${error.message}`);
+    }
+  }
 
+  /**
+   * Eliminar alerta
+   */
+  async deleteAlert(alertId: string): Promise<any> {
+    try {
+      console.log(`🗑️ Eliminando alerta ${alertId}...`);
+      const result = await this.request(`/alerts/${alertId}`, {
+        method: "DELETE",
+      });
+      console.log("✅ Alerta eliminada:", result);
+      return result;
+    } catch (error: any) {
+      console.error(`❌ Error eliminando alerta ${alertId}:`, error);
+      throw new Error(`Error eliminando alerta: ${error.message}`);
+    }
+  }
+
+  /**
+   * Marcar todas las alertas como leídas
+   */
+  async markAllAlertsAsRead(): Promise<any> {
+    try {
+      console.log("📚 Marcando todas las alertas como leídas...");
+      const result = await this.request("/alerts/mark-all-read", {
+        method: "PATCH",
+      });
+      console.log("✅ Todas las alertas marcadas como leídas:", result);
+      return result;
+    } catch (error: any) {
+      console.error("❌ Error marcando todas las alertas como leídas:", error);
+      throw new Error(
+        `Error marcando todas las alertas como leídas: ${error.message}`
+      );
+    }
+  }
+
+  /**
+   * Obtener tipos de alertas disponibles
+   */
+  async getAlertTypes(): Promise<any[]> {
+    try {
+      console.log("🏷️ Obteniendo tipos de alertas...");
+      const types = await this.request("/alerts/types");
+      console.log("✅ Tipos de alertas obtenidos:", types);
+      return types;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo tipos de alertas:", error);
+
+      // Fallback con tipos por defecto
+      return [
+        { value: "missed_dose", label: "Dosis Perdida" },
+        { value: "late_dose", label: "Dosis Tardía" },
+        { value: "low_compliance", label: "Bajo Cumplimiento" },
+        { value: "treatment_end", label: "Fin de Tratamiento" },
+      ];
+    }
+  }
+
+  /**
+   * Obtener severidades de alertas disponibles
+   */
+  async getAlertSeverities(): Promise<any[]> {
+    try {
+      console.log("⚠️ Obteniendo severidades de alertas...");
+      const severities = await this.request("/alerts/severities");
+      console.log("✅ Severidades de alertas obtenidas:", severities);
+      return severities;
+    } catch (error: any) {
+      console.error("❌ Error obteniendo severidades de alertas:", error);
+
+      // Fallback con severidades por defecto
+      return [
+        { value: "high", label: "Alta" },
+        { value: "medium", label: "Media" },
+        { value: "low", label: "Baja" },
+      ];
+    }
+  }
+
+  /**
+   * Obtener todos los datos necesarios para la página de alertas
+   */
+  async getAlertsPageData(
+    severity?: string,
+    alertType?: string,
+    showRead: boolean = true
+  ): Promise<any> {
+    try {
+      console.log("🚨 Cargando datos completos de alertas...");
+
+      // Hacer llamadas en paralelo
+      const [alerts, stats, types, severities] = await Promise.allSettled([
+        this.getAlerts(severity, alertType, showRead),
+        this.getAlertsStats(),
+        this.getAlertTypes(),
+        this.getAlertSeverities(),
+      ]);
+
+      // Extraer valores o usar fallbacks
+      const extractValue = (result: any, fallback: any) =>
+        result.status === "fulfilled" ? result.value : fallback;
+
+      const alertsData = {
+        alerts: extractValue(alerts, []),
+        stats: extractValue(stats, {
+          unread_count: 0,
+          high_priority_count: 0,
+          medium_priority_count: 0,
+          missed_dose_count: 0,
+          total_count: 0,
+        }),
+        types: extractValue(types, []),
+        severities: extractValue(severities, []),
+      };
+
+      console.log("✅ Datos completos de alertas cargados:", alertsData);
+      return alertsData;
+    } catch (error: any) {
+      console.error("❌ Error cargando datos de alertas:", error);
+      throw new Error(`Error cargando datos de alertas: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generar alertas de fallback cuando la API no está disponible
+   */
+  private generateFallbackAlerts(): any[] {
+    console.log("⚠️ Generando alertas de fallback...");
+
+    const currentUser = this.getStoredUser();
+    const baseAlerts = [
+      {
+        id: "1",
+        patient_id: 1,
+        patient_name: "María García",
+        treatment_id: 1,
+        medication_name: "Metformina 500mg",
+        type: "missed_dose",
+        message: "María García no tomó su dosis de Metformina 500mg programada",
+        severity: "high",
+        is_read: false,
+        created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
+      },
+      {
+        id: "2",
+        patient_id: 2,
+        patient_name: "Juan Pérez",
+        treatment_id: 2,
+        medication_name: "Ibuprofeno 400mg",
+        type: "late_dose",
+        message: "Juan Pérez tomó su dosis de Ibuprofeno 400mg con retraso",
+        severity: "medium",
+        is_read: false,
+        created_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45 min ago
+      },
+      {
+        id: "3",
+        patient_id: 3,
+        patient_name: "Ana López",
+        treatment_id: 3,
+        medication_name: "Enalapril 10mg",
+        type: "low_compliance",
+        message:
+          "Ana López tiene un cumplimiento del 65% en los últimos 7 días",
+        severity: "high",
+        is_read: true,
+        created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+      },
+    ];
+
+    return baseAlerts;
+  }
 }
 
 const apiService = new ApiService();
