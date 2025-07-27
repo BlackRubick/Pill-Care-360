@@ -344,10 +344,6 @@ export const AlertsPage: React.FC = () => {
                 <span>Volver al Monitoreo</span>
               </Button>
             </Link> */}
-            <Button variant="outline" className="flex items-center space-x-2">
-              <ArrowLeft size={16} />
-              <span>Volver al Monitoreo</span>
-            </Button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Gestión de Alertas</h1>
               <div className="flex items-center space-x-2">
