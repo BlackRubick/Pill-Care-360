@@ -95,12 +95,7 @@ export const NAVIGATION_ITEMS = [
     path: ROUTES.TREATMENTS.ALARMS,
     icon: 'Calendar'
   },
-  {
-    key: 'monitoring',
-    label: 'Monitoreo',
-    path: ROUTES.MONITORING.OVERVIEW,
-    icon: 'Activity'
-  },
+
   {
     key: 'reports',
     label: 'Reportes',
