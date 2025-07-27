@@ -525,15 +525,6 @@ export const AlarmsPage: React.FC = () => {
               <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
                 <User size={20} className="text-white" />
               </div>
-              <div>
-                <p className="font-medium text-green-900">
-                  Sesión activa: {currentUser.name}
-                </p>
-                <p className="text-sm text-green-700">
-                  {currentUser.email} • Rol: {currentUser.role}
-                  {currentUser.id && ` • ID: ${currentUser.id}`}
-                </p>
-              </div>
             </div>
           </Card>
         )}
