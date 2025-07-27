@@ -46,7 +46,7 @@ class ApiService {
 
   constructor() {
     // Asegurar que incluya el puerto correcto
-    this.baseURL = import.meta.env.VITE_API_URL || "http://44.209.210.203/api";
+    this.baseURL = import.meta.env.VITE_API_URL || "http://18.209.162.34/api";
     this.token = localStorage.getItem("access_token");
     
     console.log("🌐 API Base URL configurada:", this.baseURL);
