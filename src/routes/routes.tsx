@@ -208,7 +208,6 @@ export const AppRoutes: React.FC = () => {
         } 
       />
       
-      {/* Ruta 404 - Cualquier ruta no encontrada redirige al dashboard */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

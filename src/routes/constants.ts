@@ -112,11 +112,5 @@ export const NAVIGATION_ITEMS = [
     label: 'Alertas',
     path: ROUTES.MONITORING.ALERTS,
     icon: 'AlertTriangle'
-  },
-  {
-    key: 'settings',
-    label: 'Configuración',
-    path: ROUTES.SETTINGS,
-    icon: 'Settings'
-  },
+  }
 ] as const;
