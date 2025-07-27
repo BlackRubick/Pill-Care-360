@@ -22,7 +22,6 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Cell, Area, AreaChart } from 'recharts';
 import apiService from '../../services/api';
 
