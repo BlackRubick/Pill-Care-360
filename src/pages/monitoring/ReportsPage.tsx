@@ -240,22 +240,6 @@ export const ReportsPage: React.FC = () => {
               <span>Actualizar</span>
             </Button>
             
-            <Button
-              variant="outline"
-              onClick={() => exportData('pdf')}
-              className="flex items-center space-x-2"
-            >
-              <Download size={16} />
-              <span>Exportar PDF</span>
-            </Button>
-            
-            <Button
-              onClick={() => generateReport('complete')}
-              className="flex items-center space-x-2"
-            >
-              <FileText size={16} />
-              <span>Generar Reporte</span>
-            </Button>
           </div>
         </div>
 
